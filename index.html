@@ -1,0 +1,2141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>JB's Airplane</title>
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1c2333">
+<style>
+  :root{
+    --ink:#1c2333;
+    --ink-soft:#2c3448;
+    --paper:#f6f4ee;
+    --card:#ffffff;
+    --line:#e3ddcd;
+    --text:#2b2f38;
+    --text-dim:#767c8a;
+    --brass:#a9832f;
+    --brass-soft:#f1e6cc;
+    --confirmed:#4c7a6d;
+    --confirmed-bg:#e7f0ec;
+    --alert:#b8562f;
+    --alert-bg:#f7e9e1;
+    --radius:14px;
+    --mono: "SF Mono","Cascadia Code","Consolas","Roboto Mono",monospace;
+    --sans: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:var(--sans);
+    background:var(--paper);
+    color:var(--text);
+    min-height:100vh;
+    padding-bottom:96px;
+    font-size:16px;
+    transition:background .25s, color .25s;
+  }
+  body.dark{
+    --paper:#12161f;
+    --card:#1c212c;
+    --line:#333a4a;
+    --text:#e9ebf1;
+    --text-dim:#9aa2b3;
+    --brass-soft:#3a3222;
+    --confirmed-bg:#1e2f29;
+    --alert-bg:#332420;
+  }
+  body.dark .time-block .t{color:var(--text);}
+  body.dark .time-arrow::after{background:var(--card);}
+  body.dark .status-cancelado{background:#2a2f3a; color:#8a93a3;}
+  header{
+    background:var(--ink);
+    color:#fff;
+    padding:20px 18px 20px;
+    border-radius:0 0 20px 20px;
+    position:sticky; top:0; z-index:20;
+    transition:background .35s ease;
+  }
+  .header-row{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .header-left{display:flex; align-items:center; gap:10px; min-width:0;}
+  .brand{display:flex; align-items:center; gap:10px; min-width:0;}
+  .brand-mark{
+    width:38px;height:38px;border-radius:10px;
+    background:linear-gradient(135deg,var(--brass),#7a5f22);
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono); font-weight:700; font-size:16px; color:#1c2333;
+    flex-shrink:0;
+  }
+  .brand h1{font-size:20px; margin:0; font-weight:650; letter-spacing:.2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .brand p{margin:2px 0 0; font-size:13.5px; color:#a9b0c2; font-family:var(--mono); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .icon-btn{
+    background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14);
+    color:#fff; border-radius:10px; width:42px;height:42px; flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    font-size:20px; cursor:pointer;
+  }
+
+  main{padding:16px 14px 8px; max-width:640px; margin:0 auto;}
+
+  /* ---- Home: poster grid ---- */
+  .poster-grid{
+    display:grid; grid-template-columns:1fr; gap:14px; padding:4px 0 8px;
+  }
+  .poster-card{
+    aspect-ratio:16/8; border-radius:18px; position:relative; overflow:hidden;
+    cursor:pointer; color:#fff;
+    box-shadow:0 3px 10px rgba(28,35,51,.18); border:2px solid transparent;
+    transition:transform .15s, border-color .15s;
+  }
+  .poster-card.active{border-color:var(--brass);}
+  .poster-card:active{transform:scale(.97);}
+  .poster-card::after{
+    content:""; position:absolute; inset:0;
+    background:repeating-linear-gradient(115deg, rgba(255,255,255,.05) 0 2px, transparent 2px 14px);
+    pointer-events:none;
+  }
+  .poster-photo{
+    position:absolute; inset:-12px; background-size:cover; background-position:center;
+    animation:kenburns 24s ease-in-out infinite alternate;
+  }
+  @keyframes kenburns{ from{transform:scale(1);} to{transform:scale(1.13) translate(-1%, -1%);} }
+  @media (prefers-reduced-motion: reduce){ .poster-photo{animation:none;} }
+  .poster-flag{
+    font-size:30px; position:absolute; top:12px; right:12px;
+    filter:drop-shadow(0 1px 3px rgba(0,0,0,.4)); z-index:2;
+    background:rgba(0,0,0,.28); border-radius:10px; width:44px; height:44px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .poster-badge{
+    position:absolute; top:12px; left:12px; background:rgba(0,0,0,.4); color:#fff;
+    font-family:var(--mono); font-size:11px; font-weight:700; padding:5px 9px; border-radius:20px;
+    letter-spacing:.02em;
+  }
+  .poster-weather{
+    position:absolute; top:64px; right:12px; background:rgba(0,0,0,.32); color:#fff;
+    font-family:var(--mono); font-size:12px; font-weight:700; padding:5px 9px; border-radius:20px;
+    display:flex; align-items:center; gap:4px;
+  }
+  .poster-bottom{position:absolute; left:0; right:0; bottom:0; padding:13px 14px 15px;}
+  .poster-title{
+    font-family:Georgia, "Times New Roman", serif; font-size:26px; font-weight:700;
+    line-height:1.15; text-shadow:0 1px 4px rgba(0,0,0,.4);
+  }
+  .poster-name{font-size:15px; opacity:.9; margin-top:4px; text-shadow:0 1px 3px rgba(0,0,0,.35);}
+  .poster-dates{
+    font-family:var(--mono); font-size:14.5px; margin-top:10px; opacity:.97;
+    background:rgba(0,0,0,.32); display:inline-block; padding:5px 10px; border-radius:20px;
+  }
+  .poster-meta{font-family:var(--mono); font-size:13px; margin-top:8px; opacity:.9;}
+
+  .poster-add{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:var(--card); border:2px dashed var(--line); color:var(--text-dim);
+  }
+  .poster-add-plus{font-size:30px; font-weight:300; line-height:1;}
+  .poster-add-label{font-size:13px; margin-top:5px; font-weight:600;}
+
+  .home-empty{text-align:center; padding:50px 20px; color:var(--text-dim); font-size:14.5px;}
+
+  .passport-warning{
+    display:flex; align-items:flex-start; gap:10px; background:var(--alert-bg); color:var(--alert);
+    border-radius:12px; padding:13px 14px; margin:0 4px 16px; font-size:14px; line-height:1.4;
+  }
+  .passport-warning b{display:block; margin-bottom:2px; font-size:14.5px;}
+
+  .empty-state{
+    text-align:center; padding:60px 20px; color:var(--text-dim);
+  }
+  .empty-state .glyph{font-size:40px; margin-bottom:10px;}
+  .empty-state h2{font-size:18px; color:var(--text); margin:0 0 6px;}
+  .empty-state p{font-size:15px; margin:0 0 18px; line-height:1.5;}
+  .empty-state button{
+    background:var(--ink); color:#fff; border:none; border-radius:10px;
+    padding:12px 20px; font-size:15.5px; font-weight:600; cursor:pointer;
+  }
+
+  .day-group{margin-bottom:22px;}
+  .past-details{margin-bottom:18px;}
+  .past-details summary{
+    cursor:pointer; font-size:13.5px; font-weight:600; color:var(--text-dim);
+    padding:8px 4px; list-style:none;
+  }
+  .past-details summary::-webkit-details-marker{display:none;}
+  .past-details summary::before{content:"▸ "; display:inline-block;}
+  .past-details[open] summary::before{content:"▾ ";}
+  .past-details .card{opacity:.55; filter:grayscale(.3);}
+  .past-details .card:active{opacity:.8;}
+  .day-label{
+    font-family:var(--mono); font-size:13.5px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--text-dim); margin:0 0 10px 4px; display:flex; align-items:center; gap:8px;
+  }
+  .day-label::after{content:""; flex:1; height:1px; background:var(--line);}
+
+  .day-label-block{display:flex; align-items:center; gap:12px; margin:4px 2px 14px;}
+  .day-num{
+    font-family:var(--mono); font-size:30px; font-weight:800; color:var(--ink);
+    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:4px 14px; line-height:1.1; box-shadow:0 1px 3px rgba(28,35,51,.08);
+  }
+  body.dark .day-num{color:var(--text);}
+  .day-dow{font-size:16px; font-weight:700; color:var(--text); text-transform:capitalize;}
+  .day-month{font-size:12px; color:var(--text-dim); font-weight:600; text-transform:uppercase; letter-spacing:.04em;}
+
+  .connector{
+    display:flex; align-items:center; gap:6px; margin:-6px 4px 14px 20px;
+    font-size:12.5px; color:var(--text-dim); padding:6px 0 6px 14px;
+    border-left:2px dashed var(--line);
+  }
+  .connector b{color:var(--text); font-weight:700;}
+
+  .card{
+    background:var(--card); border-radius:var(--radius); margin-bottom:12px;
+    box-shadow:0 1px 2px rgba(28,35,51,.06), 0 1px 12px rgba(28,35,51,.04);
+    overflow:hidden; position:relative;
+    border-left:5px solid var(--line);
+  }
+  .card.type-flight{border-left-color:#2f4a86;}
+  .card.type-hotel{border-left-color:#a9832f;}
+  .card.type-car{border-left-color:#6b4fc4;}
+  .card.type-note{border-left-color:#5c8a3f;}
+  .card-main{padding:15px 16px 13px; display:flex; gap:12px;}
+  .type-mark{
+    width:42px;height:42px;border-radius:11px; flex-shrink:0;
+    display:flex;align-items:center;justify-content:center; font-size:20px;
+  }
+  .type-flight .type-mark{background:#e6ecf7; color:#2f4a86;}
+  .type-hotel .type-mark{background:var(--brass-soft); color:#8a6a1f;}
+  .type-car .type-mark{background:#eae7f5; color:#5b4a94;}
+  .type-note .type-mark{background:#eef1e6; color:#5c6b3f;}
+
+  .card-body{flex:1; min-width:0;}
+  .card-toprow{display:flex; justify-content:space-between; align-items:flex-start; gap:8px;}
+  .card-title{font-size:17px; font-weight:650; margin:0; line-height:1.3;}
+  .card-sub{font-size:14px; color:var(--text-dim); margin:2px 0 0;}
+  .status-pill{
+    font-size:12px; font-family:var(--mono); font-weight:650; letter-spacing:.03em;
+    padding:4px 9px; border-radius:20px; white-space:nowrap; text-transform:uppercase;
+  }
+  .status-confirmado{
+    background:var(--confirmed-bg); color:var(--confirmed);
+    border:1.5px solid var(--confirmed); transform:rotate(-3deg);
+    box-shadow:0 0 0 2px rgba(76,122,109,.12);
+  }
+  .status-pendiente{background:var(--alert-bg); color:var(--alert);}
+  .status-cancelado{background:#eee; color:#999; text-decoration:line-through;}
+
+  .card-times{display:flex; align-items:center; gap:10px; margin-top:12px;}
+  .time-block{text-align:center;}
+  .time-block .t{font-family:var(--mono); font-size:22px; font-weight:700; color:var(--ink);}
+  .time-block .p{font-size:13px; color:var(--text-dim); margin-top:2px;}
+  .tz-diff{
+    display:inline-block; margin-top:5px; padding:2px 8px; border-radius:10px;
+    font-size:11px; font-family:var(--mono); font-weight:650;
+    background:var(--brass-soft); color:#8a6a1f;
+  }
+  body.dark .tz-diff{background:rgba(169,131,47,.28); color:#e0c896;}
+  .time-arrow{flex:1; height:1px; background:var(--line); position:relative; min-width:20px;}
+  .time-arrow::after{
+    content:"✈"; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+    background:var(--card); padding:0 4px; font-size:13px; color:var(--text-dim);
+  }
+  .type-hotel .time-arrow::after{content:"🏨";}
+  .type-car .time-arrow::after{content:"🚗";}
+
+  .card-meta{
+    font-size:13.5px; color:var(--text-dim); margin-top:9px; font-family:var(--mono);
+    display:flex; flex-wrap:wrap; gap:4px 12px;
+  }
+  .card-meta span b{color:var(--text); font-weight:650;}
+
+  .stub{
+    border-top:1px dashed var(--line); padding:9px 12px 9px 16px; display:flex;
+    justify-content:space-between; align-items:center; background:#fbfaf6; gap:8px;
+  }
+  .stub-note{font-size:13.5px; color:var(--text-dim); flex:1; margin-right:4px; white-space:pre-wrap;}
+  .stub-actions{display:flex; align-items:center; gap:6px; flex-shrink:0;}
+  .live-link{
+    font-size:13px; font-weight:600; color:var(--confirmed); text-decoration:none;
+    white-space:nowrap; margin-right:2px;
+  }
+  .icon-action{
+    background:none; border:none; cursor:pointer; padding:0;
+    width:36px; height:36px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    color:var(--text-dim); transition:background .12s;
+  }
+  .icon-action:active{background:rgba(0,0,0,.06);}
+  .icon-action.del{color:var(--alert);}
+  .card-menu-item{
+    display:flex; align-items:center; gap:12px; width:100%; text-align:left;
+    background:none; border:none; border-bottom:1px solid var(--line);
+    padding:14px 4px; font-size:15.5px; color:var(--text); cursor:pointer; font-family:var(--sans);
+  }
+  .card-menu-item:last-child{border-bottom:none;}
+  .card-menu-item.danger{color:var(--alert);}
+  .card-menu-icon{font-size:18px; width:26px; text-align:center; flex-shrink:0;}
+  .doc-thumb{
+    width:36px; height:36px; border-radius:8px; cursor:pointer; flex-shrink:0;
+    border:1px solid var(--line); background-size:cover; background-position:center;
+    display:flex; align-items:center; justify-content:center; font-size:15px; background-color:var(--paper);
+  }
+
+  .punch{position:absolute; width:14px;height:14px; background:var(--paper); border-radius:50%; top:calc(100% - 7px); z-index:2;}
+  .punch.left{left:-7px;} .punch.right{right:-7px;}
+
+  /* FAB */
+  .fab{
+    position:fixed; bottom:22px; right:20px; width:58px; height:58px; border-radius:50%;
+    background:var(--brass); color:#1c2333; border:none; font-size:30px; line-height:1;
+    box-shadow:0 4px 14px rgba(28,35,51,.28); cursor:pointer; z-index:30;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  /* Modal */
+  .overlay{
+    position:fixed; inset:0; background:rgba(20,24,36,.5); z-index:50;
+    display:none; align-items:flex-end; justify-content:center;
+  }
+  .overlay.show{display:flex;}
+  .sheet{
+    background:var(--paper); width:100%; max-width:640px; border-radius:20px 20px 0 0;
+    padding:18px 18px 26px; max-height:88vh; overflow-y:auto;
+    animation:slideup .18s ease-out;
+  }
+  @keyframes slideup{from{transform:translateY(16px); opacity:.6;} to{transform:translateY(0); opacity:1;}}
+  .sheet h3{margin:0 0 14px; font-size:19px;}
+  .sheet-handle{width:36px; height:4px; background:var(--line); border-radius:3px; margin:0 auto 14px;}
+
+  .type-tabs{display:flex; gap:6px; margin-bottom:16px;}
+  .type-tab{
+    flex:1; padding:10px 4px; border-radius:9px; border:1px solid var(--line); background:var(--card);
+    font-size:14px; text-align:center; cursor:pointer; font-weight:600; color:var(--text-dim);
+  }
+  .type-tab.active{background:var(--ink); color:#fff; border-color:var(--ink);}
+
+  .field{margin-bottom:12px;}
+  .field label{display:block; font-size:13.5px; color:var(--text-dim); margin-bottom:5px; font-weight:600;}
+  .field input, .field select, .field textarea{
+    width:100%; padding:12px; border-radius:10px; border:1px solid var(--line);
+    background:var(--card); font-size:16.5px; color:var(--text); font-family:var(--sans);
+  }
+  .field textarea{resize:vertical; min-height:56px; font-family:var(--sans);}
+  .row2{display:flex; gap:10px;}
+  .row2 .field{flex:1;}
+
+  .sheet-actions{display:flex; gap:10px; margin-top:6px;}
+  .btn-primary{
+    flex:1; background:var(--ink); color:#fff; border:none; border-radius:10px;
+    padding:14px; font-size:16.5px; font-weight:650; cursor:pointer;
+  }
+  .btn-secondary{
+    background:var(--card); color:var(--text-dim); border:1px solid var(--line); border-radius:10px;
+    padding:14px 16px; font-size:16.5px; font-weight:600; cursor:pointer;
+  }
+
+  .toolbar{display:flex; flex-wrap:wrap; gap:8px; margin:2px 4px 14px;}
+  .toolbar button{
+    flex:1 1 30%; background:var(--card); border:1px solid var(--line); border-radius:10px;
+    padding:11px 4px; font-size:13.5px; font-weight:600; color:var(--text-dim); cursor:pointer;
+  }
+  #importFile{display:none;}
+
+  .search-row{margin:0 4px 16px; position:relative;}
+  .search-row input{
+    width:100%; padding:12px 14px 12px 40px; border-radius:12px; border:1px solid var(--line);
+    background:var(--card); font-size:15.5px; color:var(--text); font-family:var(--sans);
+  }
+  .search-row::before{
+    content:"🔍"; position:absolute; left:13px; top:50%; transform:translateY(-50%); font-size:15px; opacity:.6;
+  }
+
+  .packing-item{
+    display:flex; align-items:center; gap:12px; padding:12px 4px; border-bottom:1px solid var(--line);
+  }
+  .packing-item input[type=checkbox]{width:22px; height:22px; flex-shrink:0; accent-color:var(--brass);}
+  .packing-item span{flex:1; font-size:16px;}
+  .packing-item.checked span{text-decoration:line-through; color:var(--text-dim);}
+  .packing-add-row{display:flex; gap:8px; margin-top:14px;}
+  .packing-add-row input{flex:1;}
+
+  .toast{
+    position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(8px);
+    background:var(--ink); color:#fff; padding:11px 20px; border-radius:30px; font-size:14.5px;
+    opacity:0; pointer-events:none; transition:.2s; z-index:60;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  @media print{
+    header, .toolbar, .search-row, .fab, .stub-actions, .poster-badge, #homeView{display:none !important;}
+    body{padding-bottom:0; background:#fff; font-size:12px;}
+    .card{box-shadow:none; border:1px solid #ccc; break-inside:avoid;}
+    .punch{display:none;}
+    .day-label{color:#000;}
+  }
+
+  #homeView, #tripView{display:none;}
+  @keyframes slideInRight{from{opacity:0; transform:translateX(28px);} to{opacity:1; transform:translateX(0);}}
+  @keyframes slideInLeft{from{opacity:0; transform:translateX(-28px);} to{opacity:1; transform:translateX(0);}}
+  .anim-in-right{animation:slideInRight .3s cubic-bezier(.2,.8,.3,1);}
+  .anim-in-left{animation:slideInLeft .3s cubic-bezier(.2,.8,.3,1);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-row">
+    <div class="header-left">
+      <button class="icon-btn" id="backBtn" onclick="goHome()" style="display:none;" title="Volver">←</button>
+      <div class="brand">
+        <div class="brand-mark">✈</div>
+        <div style="min-width:0;">
+          <h1 id="headerTitle">JB's Airplane</h1>
+          <p id="headerSub">guardado en este dispositivo</p>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex; gap:8px; flex-shrink:0;">
+      <button class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Cambiar tema">🌙</button>
+      <button class="icon-btn" onclick="openSettingsSheet()" title="Ajustes">⚙️</button>
+      <button class="icon-btn" onclick="openTripManager()" title="Gestionar viajes">⋮</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- HOME: poster gallery only -->
+  <div id="homeView">
+    <div class="poster-grid" id="posterGrid"></div>
+    <details id="pastDetails" style="display:none; margin-top:6px;">
+      <summary id="pastSummary" style="cursor:pointer; font-size:14px; font-weight:600; color:var(--text-dim); padding:8px 4px;">Viajes pasados</summary>
+      <div class="poster-grid" id="pastGrid" style="margin-top:10px;"></div>
+    </details>
+  </div>
+
+  <!-- TRIP DETAIL -->
+  <div id="tripView">
+    <div class="toolbar">
+      <button onclick="openPasteSheet()">📋 Pegar reserva</button>
+      <button onclick="openPackingSheet()">🎒 Equipaje</button>
+      <button onclick="exportTripICS()">📅 Calendario</button>
+      <button onclick="shareTrip()">📤 Compartir / PDF</button>
+      <button onclick="exportBackup()">⬇ Copia</button>
+      <button onclick="document.getElementById('importFile').click()">⬆ Restaurar</button>
+      <input type="file" id="importFile" accept="application/json" onchange="importBackup(event)">
+    </div>
+    <div id="passportWarning"></div>
+    <div class="search-row">
+      <input type="text" id="searchInput" placeholder="Buscar en este viaje..." oninput="renderTimeline()">
+    </div>
+    <div id="timeline"></div>
+  </div>
+</main>
+
+<button class="fab" id="fab" onclick="openAddSheet()" style="display:none;">+</button>
+
+<!-- Add/Edit segment sheet -->
+<div class="overlay" id="segOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h3 id="sheetTitle">Añadir elemento</h3>
+
+    <div class="type-tabs" id="typeTabs">
+      <div class="type-tab" data-type="flight" onclick="setSegType('flight')">✈ Vuelo</div>
+      <div class="type-tab" data-type="hotel" onclick="setSegType('hotel')">🏨 Hotel</div>
+      <div class="type-tab" data-type="car" onclick="setSegType('car')">🚗 Coche</div>
+      <div class="type-tab" data-type="note" onclick="setSegType('note')">📝 Nota</div>
+    </div>
+
+    <form id="segForm" onsubmit="saveSegment(event)">
+      <input type="hidden" id="segId">
+
+      <!-- FLIGHT fields -->
+      <div class="type-fields" data-for="flight">
+        <div class="row2">
+          <div class="field"><label>Aerolínea y nº de vuelo</label><input id="f_airline" placeholder="Iberia IB6172"></div>
+          <div class="field"><label>Localizador</label><input id="f_locator" placeholder="AB12CD"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Origen</label><input id="f_from" list="airportCodes" placeholder="MAD"></div>
+          <div class="field"><label>Destino</label><input id="f_to" list="airportCodes" placeholder="GRU"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Fecha y hora salida</label><input id="f_dep" type="datetime-local"></div>
+          <div class="field"><label>Fecha y hora llegada</label><input id="f_arr" type="datetime-local"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Terminal / Puerta</label><input id="f_gate" placeholder="T4S · Puerta 32"></div>
+          <div class="field"><label>Asiento</label><input id="f_seat" placeholder="14A"></div>
+        </div>
+      </div>
+
+      <!-- HOTEL fields -->
+      <div class="type-fields" data-for="hotel">
+        <div class="field"><label>Nombre del hotel</label><input id="h_name" placeholder="Hotel Fasano"></div>
+        <div class="field"><label>Dirección</label><input id="h_addr" placeholder="Rua Vittorio Fasano, 88, São Paulo"></div>
+        <div class="row2">
+          <div class="field"><label>Check-in</label><input id="h_in" type="datetime-local"></div>
+          <div class="field"><label>Check-out</label><input id="h_out" type="datetime-local"></div>
+        </div>
+        <div class="field"><label>Localizador / referencia</label><input id="h_locator" placeholder="RES-88213"></div>
+      </div>
+
+      <!-- CAR fields -->
+      <div class="type-fields" data-for="car">
+        <div class="row2">
+          <div class="field"><label>Empresa</label><input id="c_company" placeholder="Hertz"></div>
+          <div class="field"><label>Localizador</label><input id="c_locator" placeholder="HZ99231"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Recogida (lugar y hora)</label><input id="c_from" placeholder="Aeropuerto GRU"></div>
+          <div class="field"><label></label><input id="c_dep" type="datetime-local"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Devolución (lugar y hora)</label><input id="c_to" placeholder="Aeropuerto GRU"></div>
+          <div class="field"><label></label><input id="c_arr" type="datetime-local"></div>
+        </div>
+      </div>
+
+      <!-- NOTE fields -->
+      <div class="type-fields" data-for="note">
+        <div class="field"><label>Título</label><input id="n_title" placeholder="Cena con el equipo"></div>
+        <div class="field"><label>Fecha y hora</label><input id="n_when" type="datetime-local"></div>
+        <div class="field"><label>Detalle</label><textarea id="n_detail" placeholder="Dirección, contacto, referencia..."></textarea></div>
+      </div>
+
+      <div class="row2">
+        <div class="field"><label>Estado</label>
+          <select id="seg_status">
+            <option value="confirmado">Confirmado</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+        </div>
+        <div class="field"><label>Notas adicionales</label><input id="seg_note" placeholder="opcional"></div>
+      </div>
+
+      <div class="field">
+        <label>📎 Foto de documento (opcional — pasaporte, carnet, boleto...)</label>
+        <input type="file" accept="image/*" id="seg_docphoto" onchange="previewDocPhoto(event)">
+        <div id="docPhotoPreview" style="margin-top:8px; display:flex; align-items:center; gap:10px;"></div>
+      </div>
+
+      <div class="sheet-actions">
+        <button type="button" class="btn-secondary" onclick="closeSheet()">Cancelar</button>
+        <button type="submit" class="btn-primary">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Paste / smart import sheet -->
+<div class="overlay" id="pasteOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h3>Pegar reserva</h3>
+    <p style="font-size:14px; color:var(--text-dim); margin:-6px 0 14px; line-height:1.5;">
+      Pega aquí el texto de un email de confirmación, o un bloque de datos que te haya dado Claude en el chat.
+      Si es texto libre, la app intentará rellenar el formulario por ti (revisa antes de guardar).
+      Si es un dato ya estructurado de Claude, se añadirá directamente.
+    </p>
+    <div class="field">
+      <textarea id="pasteInput" style="min-height:160px;" placeholder="Pega aquí el texto de tu reserva..."></textarea>
+    </div>
+    <div class="sheet-actions">
+      <button type="button" class="btn-secondary" onclick="closePasteSheet()">Cancelar</button>
+      <button type="button" class="btn-primary" onclick="analyzePaste()">Analizar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Packing checklist sheet -->
+<div class="overlay" id="packingOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h3>🎒 Equipaje</h3>
+    <div id="packingList"></div>
+    <div class="packing-add-row">
+      <input type="text" id="packingNewItem" placeholder="Añadir artículo..." onkeydown="if(event.key==='Enter'){addPackingItem();}">
+      <button class="btn-primary" style="flex:none; padding:12px 18px;" onclick="addPackingItem()">Añadir</button>
+    </div>
+    <div class="sheet-actions">
+      <button type="button" class="btn-secondary" onclick="closePackingSheet()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Trip manager sheet -->
+<div class="overlay" id="tripOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h3>Gestionar viajes</h3>
+    <div id="tripList"></div>
+    <div class="sheet-actions">
+      <button type="button" class="btn-secondary" onclick="closeTripManager()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<datalist id="airportCodes"></datalist>
+
+<!-- Settings sheet -->
+<div class="overlay" id="settingsOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h3>⚙️ Ajustes</h3>
+    <p style="font-size:14px; color:var(--text-dim); margin:-6px 0 14px; line-height:1.5;">
+      Con tu propia clave de <a href="https://aviationstack.com" target="_blank" rel="noopener">Aviationstack</a> (gratis, 100 consultas/mes),
+      podrás pulsar "🔄 Consultar" en cualquier vuelo para ver puerta y retraso en vivo, dentro de la propia tarjeta.
+      Se guarda solo en este navegador — nunca sale de tu teléfono.
+    </p>
+    <div class="field">
+      <label>Clave de Aviationstack (opcional)</label>
+      <input type="text" id="aviationstackKeyInput" placeholder="Pega aquí tu clave">
+    </div>
+    <div class="sheet-actions">
+      <button type="button" class="btn-secondary" onclick="closeSettingsSheet()">Cerrar</button>
+      <button type="button" class="btn-primary" onclick="saveAviationstackKey()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Card overflow menu -->
+<div class="overlay" id="cardMenuOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h3>Opciones</h3>
+    <div id="cardMenuList"></div>
+    <div class="sheet-actions">
+      <button type="button" class="btn-secondary" onclick="closeCardMenu()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox for viewing document photos -->
+<div class="overlay" id="lightboxOverlay" onclick="closeLightbox()" style="align-items:center;">
+  <img id="lightboxImg" style="max-width:92%; max-height:85vh; border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.5);">
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- Document photo lightbox ---------- */
+async function openLightboxForSeg(segId){
+  const trip = activeTrip();
+  const seg = trip.segments.find(s=>s.id===segId);
+  if(!seg || !seg.hasDocPhoto) return;
+  const dataUrl = await idbGet('seg:' + segId);
+  if(dataUrl){
+    document.getElementById('lightboxImg').src = dataUrl;
+    document.getElementById('lightboxOverlay').classList.add('show');
+  }
+}
+function closeLightbox(){ document.getElementById('lightboxOverlay').classList.remove('show'); }
+
+/* ---------- Card overflow menu (editar, eliminar, compartir, etc.) ---------- */
+function openCardMenu(segId){
+  const trip = activeTrip();
+  const seg = trip.segments.find(s=>s.id===segId);
+  if(!seg) return;
+  const items = [];
+  items.push({icon:ICON_EDIT, label:'Editar', action:`editSegment('${segId}')`});
+  if(seg.hasDocPhoto) items.push({icon:'📎', label:'Ver documento', action:`openLightboxForSeg('${segId}')`});
+  items.push({icon:'📤', label:'Compartir este elemento', action:`shareSegment('${segId}')`});
+  if(seg.type==='flight') items.push({icon:'🔄', label:'Consultar estado (Aviationstack)', action:`checkLiveStatus('${segId}')`});
+  items.push({icon:ICON_DELETE, label:'Eliminar', action:`deleteSegment('${segId}')`, danger:true});
+
+  document.getElementById('cardMenuList').innerHTML = items.map(it=>`
+    <button type="button" class="card-menu-item ${it.danger?'danger':''}" onclick="closeCardMenu(); ${it.action}">
+      <span class="card-menu-icon">${it.icon}</span><span>${it.label}</span>
+    </button>
+  `).join('');
+  document.getElementById('cardMenuOverlay').classList.add('show');
+}
+function closeCardMenu(){ document.getElementById('cardMenuOverlay').classList.remove('show'); }
+
+/* ---------- Settings (Aviationstack key, stored locally only) ---------- */
+const AVIATIONSTACK_KEY = 'jbAirplaneAviationstackKey';
+function openSettingsSheet(){
+  document.getElementById('aviationstackKeyInput').value = localStorage.getItem(AVIATIONSTACK_KEY) || '';
+  document.getElementById('settingsOverlay').classList.add('show');
+}
+function closeSettingsSheet(){ document.getElementById('settingsOverlay').classList.remove('show'); }
+function saveAviationstackKey(){
+  const val = document.getElementById('aviationstackKeyInput').value.trim();
+  if(val) localStorage.setItem(AVIATIONSTACK_KEY, val);
+  else localStorage.removeItem(AVIATIONSTACK_KEY);
+  closeSettingsSheet();
+  showToast(val ? 'Clave guardada' : 'Clave eliminada');
+}
+
+async function checkLiveStatus(segId){
+  const key = localStorage.getItem(AVIATIONSTACK_KEY);
+  const resultEl = document.getElementById('livestatus_' + segId);
+  if(!key){
+    showToast('Añade tu clave de Aviationstack en Ajustes ⚙️');
+    openSettingsSheet();
+    return;
+  }
+  const trip = activeTrip();
+  const seg = trip.segments.find(s=>s.id===segId);
+  const code = flightCodeFromAirline(seg.airline);
+  if(!code){ showToast('No se pudo identificar el número de vuelo'); return; }
+  if(!resultEl) return;
+  resultEl.style.display = 'block';
+  resultEl.textContent = 'Consultando...';
+  try{
+    const res = await fetch(`http://api.aviationstack.com/v1/flights?access_key=${key}&flight_iata=${code}`);
+    const data = await res.json();
+    if(data.error){
+      resultEl.textContent = '⚠️ ' + (data.error.message || 'Error de la API');
+      return;
+    }
+    const f = data.data && data.data[0];
+    if(!f){
+      resultEl.textContent = 'Sin datos en vivo todavía para este vuelo (suele aparecer el mismo día).';
+      return;
+    }
+    const gate = f.departure && f.departure.gate ? `Puerta ${f.departure.gate}` : 'Puerta sin asignar';
+    const delayMin = f.departure && f.departure.delay;
+    const delay = delayMin ? `retraso de ${delayMin} min` : 'sin retraso';
+    resultEl.textContent = `${f.flight_status || 'Estado desconocido'} — ${gate}, ${delay}`;
+  }catch(e){
+    resultEl.textContent = '⚠️ No se pudo conectar. Si tu app está en https, es probable que sea el bloqueo de http descrito — sería necesario un plan de pago con https en Aviationstack.';
+  }
+}
+
+/* ---------- Icons (inline SVG, offline-safe) ---------- */
+const ICON_EDIT = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+const ICON_DELETE = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
+const ICON_CAMERA = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg>';
+
+/* ---------- Theme (auto dark mode by time of day, with manual override) ---------- */
+const THEME_KEY = 'misViajesTheme_v1';
+function applyTheme(){
+  let pref = localStorage.getItem(THEME_KEY); // 'dark' | 'light' | null (auto)
+  let dark;
+  if(pref === 'dark') dark = true;
+  else if(pref === 'light') dark = false;
+  else { const h = new Date().getHours(); dark = (h >= 19 || h < 7); }
+  document.body.classList.toggle('dark', dark);
+  const btn = document.getElementById('themeBtn');
+  if(btn) btn.textContent = dark ? '☀️' : '🌙';
+}
+function toggleTheme(){
+  const isDark = document.body.classList.contains('dark');
+  localStorage.setItem(THEME_KEY, isDark ? 'light' : 'dark');
+  applyTheme();
+}
+
+/* ---------- Storage ---------- */
+const STORE_KEY = 'misViajesData_v1';
+
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return { trips: [], activeTripId: null };
+}
+/* ---------- Image storage (IndexedDB — far larger quota than localStorage,
+   works the same regardless of how the file was opened) ---------- */
+const IDB_NAME = 'jbAirplaneImages';
+const IDB_STORE = 'images';
+function idbOpen(){
+  return new Promise((resolve, reject)=>{
+    if(!window.indexedDB){ reject(new Error('IndexedDB no disponible')); return; }
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = ()=>{ req.result.createObjectStore(IDB_STORE); };
+    req.onsuccess = ()=>resolve(req.result);
+    req.onerror = ()=>reject(req.error);
+  });
+}
+async function idbSet(key, value){
+  const db = await idbOpen();
+  return new Promise((resolve, reject)=>{
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(value, key);
+    tx.oncomplete = ()=>resolve(true);
+    tx.onerror = ()=>reject(tx.error);
+  });
+}
+async function idbGet(key){
+  const db = await idbOpen();
+  return new Promise((resolve, reject)=>{
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const req = tx.objectStore(IDB_STORE).get(key);
+    req.onsuccess = ()=>resolve(req.result || null);
+    req.onerror = ()=>reject(req.error);
+  });
+}
+async function idbDelete(key){
+  try{
+    const db = await idbOpen();
+    return new Promise((resolve)=>{
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).delete(key);
+      tx.oncomplete = ()=>resolve(true);
+      tx.onerror = ()=>resolve(false);
+    });
+  }catch(e){ return false; }
+}
+
+function saveData(){
+  try{
+    localStorage.setItem(STORE_KEY, JSON.stringify(state));
+    return true;
+  }catch(e){
+    console.error('saveData failed', e);
+    return false;
+  }
+}
+function compressImage(file, maxDim, quality){
+  maxDim = maxDim || 1280; quality = quality || 0.72;
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      const img = new Image();
+      img.onload = ()=>{
+        let w = img.width, h = img.height;
+        if(w > maxDim || h > maxDim){
+          const scale = maxDim / Math.max(w, h);
+          w = Math.round(w * scale); h = Math.round(h * scale);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+let state = loadData();
+let currentView = 'home';
+
+function uid(){ return 't' + Math.random().toString(36).slice(2,9); }
+
+/* ---------- Trip management ---------- */
+function ensureTrip(){
+  if(state.trips.length === 0){
+    const id = uid();
+    state.trips.push({id, name:'Mi próximo viaje', segments:[]});
+    state.activeTripId = id;
+    saveData();
+  }
+  if(!state.trips.find(t=>t.id===state.activeTripId)){
+    state.activeTripId = state.trips[0].id;
+    saveData();
+  }
+}
+function activeTrip(){
+  return state.trips.find(t=>t.id===state.activeTripId);
+}
+
+/* ---------- View navigation ---------- */
+function goHome(){
+  currentView = 'home';
+  renderView();
+}
+function openTrip(id){
+  state.activeTripId = id;
+  saveData();
+  currentView = 'trip';
+  renderView();
+}
+function renderView(){
+  ensureTrip();
+  const home = currentView === 'home';
+  const homeEl = document.getElementById('homeView');
+  const tripEl = document.getElementById('tripView');
+  homeEl.style.display = home ? 'block' : 'none';
+  tripEl.style.display = home ? 'none' : 'block';
+  document.getElementById('backBtn').style.display = home ? 'none' : 'flex';
+  document.getElementById('fab').style.display = home ? 'none' : 'flex';
+
+  const shownEl = home ? homeEl : tripEl;
+  const animClass = home ? 'anim-in-left' : 'anim-in-right';
+  shownEl.classList.remove('anim-in-left','anim-in-right');
+  void shownEl.offsetWidth; // restart animation
+  shownEl.classList.add(animClass);
+
+  const headerEl = document.querySelector('header');
+  if(home){
+    document.getElementById('headerTitle').textContent = "JB's Airplane";
+    const n = state.trips.length;
+    document.getElementById('headerSub').textContent = n + (n===1 ? ' viaje guardado' : ' viajes guardados');
+    if(headerEl) headerEl.style.background = '';
+    renderPosters();
+  } else {
+    const trip = activeTrip();
+    document.getElementById('headerTitle').textContent = trip.name;
+    const p = tripPosterData(trip);
+    document.getElementById('headerSub').textContent = (p.dateStart || p.dateEnd)
+      ? `${p.dateStart}${p.dateEnd ? ' → ' + p.dateEnd : ''}`
+      : 'sin fechas todavía';
+    if(headerEl) headerEl.style.background = `linear-gradient(135deg, rgba(0,0,0,.35), rgba(0,0,0,.35)), linear-gradient(135deg, ${p.c1}, ${p.c2})`;
+    renderTimeline(true);
+  }
+  updateAppBadge();
+}
+
+function promptNewTrip(){
+  const name = prompt('Nombre del viaje (ej. "Brasil - Julio 2026")');
+  if(!name) return;
+  const id = uid();
+  state.trips.push({id, name, segments:[]});
+  saveData();
+  openTrip(id);
+  showToast('Viaje creado');
+}
+function openTripManager(){
+  const list = document.getElementById('tripList');
+  list.innerHTML = state.trips.map(t=>`
+    <div class="field" style="border:1px solid var(--line); border-radius:10px; padding:10px; background:var(--card);">
+      <input value="${escapeHtml(t.name)}" onchange="renameTrip('${t.id}', this.value)" style="margin-bottom:8px;">
+      <div style="display:flex; gap:8px; margin-bottom:8px;">
+        <button class="btn-secondary" style="flex:1; padding:10px; font-size:13.5px; display:flex; align-items:center; justify-content:center; gap:6px;" onclick="document.getElementById('photoInput_${t.id}').click()">${ICON_CAMERA} ${t.photo?'Cambiar foto':'Añadir foto'}</button>
+        ${t.photo?`<button class="btn-secondary" style="padding:10px 12px; font-size:13.5px;" onclick="removeTripPhoto('${t.id}')">Quitar</button>`:''}
+        <button class="btn-secondary" style="padding:10px 12px; color:var(--alert); display:flex; align-items:center;" onclick="deleteTrip('${t.id}')">${ICON_DELETE}</button>
+      </div>
+      <label style="display:block; font-size:12.5px; color:var(--text-dim); font-weight:600; margin-bottom:4px;">🛂 Pasaportes (tuyos o de tu familia)</label>
+      <div id="passportList_${t.id}">${renderPassportRows(t)}</div>
+      <button class="btn-secondary" style="width:100%; margin-top:6px; padding:9px; font-size:13px;" onclick="addPassport('${t.id}')">+ Añadir pasaporte</button>
+      <input type="file" accept="image/*" id="photoInput_${t.id}" style="display:none;" onchange="setTripPhoto('${t.id}', event)">
+    </div>
+  `).join('') || '<p style="color:var(--text-dim); font-size:14.5px;">No hay viajes todavía.</p>';
+  document.getElementById('tripOverlay').classList.add('show');
+}
+function getPassports(trip){
+  if(!trip.passports){
+    trip.passports = [];
+    if(trip.passportExpiry){
+      trip.passports.push({id: uid(), name:'Titular', expiry: trip.passportExpiry});
+      delete trip.passportExpiry;
+    }
+  }
+  return trip.passports;
+}
+function renderPassportRows(t){
+  const passports = getPassports(t);
+  if(!passports.length) return '<p style="color:var(--text-dim); font-size:13px; margin:4px 0;">Ninguno añadido.</p>';
+  return passports.map(p=>`
+    <div style="display:flex; gap:6px; margin-bottom:6px; align-items:center;">
+      <input placeholder="Nombre (ej. Jesús)" value="${escapeHtml(p.name||'')}" style="flex:1.2;" onchange="updatePassport('${t.id}','${p.id}','name',this.value)">
+      <input type="date" value="${p.expiry||''}" style="flex:1;" onchange="updatePassport('${t.id}','${p.id}','expiry',this.value)">
+      <button class="icon-action del" title="Eliminar" onclick="removePassport('${t.id}','${p.id}')">${ICON_DELETE}</button>
+    </div>
+  `).join('');
+}
+function addPassport(tripId){
+  const t = state.trips.find(t=>t.id===tripId);
+  getPassports(t).push({id: uid(), name:'', expiry:''});
+  saveData();
+  document.getElementById('passportList_'+tripId).innerHTML = renderPassportRows(t);
+}
+function updatePassport(tripId, passportId, field, value){
+  const t = state.trips.find(t=>t.id===tripId);
+  const p = getPassports(t).find(p=>p.id===passportId);
+  if(p){ p[field] = value; saveData(); if(currentView==='trip') renderPassportWarning(activeTrip()); }
+}
+function removePassport(tripId, passportId){
+  const t = state.trips.find(t=>t.id===tripId);
+  t.passports = getPassports(t).filter(p=>p.id!==passportId);
+  saveData();
+  document.getElementById('passportList_'+tripId).innerHTML = renderPassportRows(t);
+  if(currentView==='trip') renderPassportWarning(activeTrip());
+}
+async function setTripPhoto(id, event){
+  const file = event.target.files[0];
+  if(!file) return;
+  try{
+    const dataUrl = await compressImage(file, 1280, 0.8);
+    await idbSet('trip:' + id, dataUrl);
+    const t = state.trips.find(t=>t.id===id);
+    if(!t) return;
+    t.photo = true; // flag only — the actual image lives in IndexedDB, not localStorage
+    saveData();
+    openTripManager();
+    renderView();
+    showToast('Foto guardada');
+  }catch(e){
+    showToast('No se pudo guardar esa imagen');
+  }
+}
+async function removeTripPhoto(id){
+  const t = state.trips.find(t=>t.id===id);
+  if(t){ delete t.photo; saveData(); await idbDelete('trip:' + id); openTripManager(); renderView(); }
+}
+function closeTripManager(){ document.getElementById('tripOverlay').classList.remove('show'); }
+function renameTrip(id, name){
+  const t = state.trips.find(t=>t.id===id);
+  if(t){ t.name = name || t.name; saveData(); renderView(); }
+}
+function deleteTrip(id){
+  if(state.trips.length===1){ showToast('Debe quedar al menos un viaje'); return; }
+  if(!confirm('¿Eliminar este viaje y todos sus elementos?')) return;
+  const wasActive = state.activeTripId===id;
+  state.trips = state.trips.filter(t=>t.id!==id);
+  if(wasActive) state.activeTripId = state.trips[0].id;
+  saveData();
+  openTripManager();
+  if(wasActive) currentView='home';
+  renderView();
+}
+
+/* ---------- Segment form ---------- */
+let currentSegType = 'flight';
+let editingId = null;
+let pendingDocPhoto = null;
+
+async function previewDocPhoto(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  try{
+    pendingDocPhoto = await compressImage(file, 1280, 0.72);
+    renderDocPhotoPreview();
+  }catch(e){
+    showToast('No se pudo procesar esa imagen');
+  }
+}
+function renderDocPhotoPreview(){
+  const el = document.getElementById('docPhotoPreview');
+  if(!el) return;
+  el.innerHTML = pendingDocPhoto
+    ? `<img src="${pendingDocPhoto}" style="width:56px;height:56px;border-radius:10px;object-fit:cover;"><button type="button" class="btn-secondary" style="padding:8px 12px; font-size:13px;" onclick="removeDocPhoto()">Quitar</button>`
+    : '';
+}
+function removeDocPhoto(){
+  pendingDocPhoto = null;
+  const input = document.getElementById('seg_docphoto');
+  if(input) input.value = '';
+  renderDocPhotoPreview();
+}
+
+function openAddSheet(){
+  editingId = null;
+  pendingDocPhoto = null;
+  document.getElementById('sheetTitle').textContent = 'Añadir elemento';
+  document.getElementById('segForm').reset();
+  setSegType('flight');
+  renderDocPhotoPreview();
+  document.getElementById('segOverlay').classList.add('show');
+}
+function closeSheet(){ document.getElementById('segOverlay').classList.remove('show'); }
+
+function setSegType(type){
+  currentSegType = type;
+  document.querySelectorAll('.type-tab').forEach(el=>{
+    el.classList.toggle('active', el.dataset.type===type);
+  });
+  document.querySelectorAll('.type-fields').forEach(el=>{
+    el.style.display = (el.dataset.for===type) ? 'block' : 'none';
+  });
+}
+
+async function saveSegment(e){
+  e.preventDefault();
+  const trip = activeTrip();
+  const status = document.getElementById('seg_status').value;
+  const extraNote = document.getElementById('seg_note').value.trim();
+  let seg = { id: editingId || uid(), type: currentSegType, status, note: extraNote, hasDocPhoto: !!pendingDocPhoto };
+
+  if(currentSegType==='flight'){
+    seg.airline = val('f_airline'); seg.locator = val('f_locator');
+    seg.from = val('f_from'); seg.to = val('f_to');
+    seg.dep = val('f_dep'); seg.arr = val('f_arr');
+    seg.gate = val('f_gate'); seg.seat = val('f_seat');
+    seg.sortTime = seg.dep || seg.arr || '';
+  } else if(currentSegType==='hotel'){
+    seg.name = val('h_name'); seg.addr = val('h_addr');
+    seg.checkin = val('h_in'); seg.checkout = val('h_out');
+    seg.locator = val('h_locator');
+    seg.sortTime = seg.checkin || '';
+  } else if(currentSegType==='car'){
+    seg.company = val('c_company'); seg.locator = val('c_locator');
+    seg.from = val('c_from'); seg.to = val('c_to');
+    seg.dep = val('c_dep'); seg.arr = val('c_arr');
+    seg.sortTime = seg.dep || '';
+  } else if(currentSegType==='note'){
+    seg.title = val('n_title'); seg.detail = val('n_detail');
+    seg.when = val('n_when');
+    seg.sortTime = seg.when || '';
+  }
+
+  const previousSegments = trip.segments.slice();
+  if(editingId){
+    const idx = trip.segments.findIndex(s=>s.id===editingId);
+    if(idx>-1) trip.segments[idx] = seg;
+  } else {
+    trip.segments.push(seg);
+  }
+  if(saveData()){
+    if(pendingDocPhoto) await idbSet('seg:' + seg.id, pendingDocPhoto);
+    else await idbDelete('seg:' + seg.id);
+    closeSheet();
+    renderView();
+    showToast('Guardado');
+  } else {
+    trip.segments = previousSegments; // roll back so state stays consistent
+    alert('No se pudo guardar. Vuelve a intentarlo — si persiste, prueba a cerrar y abrir la app de nuevo.');
+  }
+}
+function val(id){ return document.getElementById(id).value.trim(); }
+
+async function editSegment(segId){
+  const trip = activeTrip();
+  const seg = trip.segments.find(s=>s.id===segId);
+  if(!seg) return;
+  editingId = segId;
+  pendingDocPhoto = null;
+  document.getElementById('sheetTitle').textContent = 'Editar elemento';
+  document.getElementById('segForm').reset();
+  setSegType(seg.type);
+  renderDocPhotoPreview();
+  if(seg.hasDocPhoto){
+    idbGet('seg:' + segId).then(dataUrl=>{
+      if(dataUrl && editingId===segId){ pendingDocPhoto = dataUrl; renderDocPhotoPreview(); }
+    });
+  }
+
+  if(seg.type==='flight'){
+    setv('f_airline',seg.airline); setv('f_locator',seg.locator);
+    setv('f_from',seg.from); setv('f_to',seg.to);
+    setv('f_dep',seg.dep); setv('f_arr',seg.arr);
+    setv('f_gate',seg.gate); setv('f_seat',seg.seat);
+  } else if(seg.type==='hotel'){
+    setv('h_name',seg.name); setv('h_addr',seg.addr);
+    setv('h_in',seg.checkin); setv('h_out',seg.checkout);
+    setv('h_locator',seg.locator);
+  } else if(seg.type==='car'){
+    setv('c_company',seg.company); setv('c_locator',seg.locator);
+    setv('c_from',seg.from); setv('c_to',seg.to);
+    setv('c_dep',seg.dep); setv('c_arr',seg.arr);
+  } else if(seg.type==='note'){
+    setv('n_title',seg.title); setv('n_detail',seg.detail); setv('n_when',seg.when);
+  }
+  setv('seg_status', seg.status || 'confirmado');
+  setv('seg_note', seg.note || '');
+  document.getElementById('segOverlay').classList.add('show');
+}
+function setv(id,v){ document.getElementById(id).value = v || ''; }
+
+async function deleteSegment(segId){
+  if(!confirm('¿Eliminar este elemento?')) return;
+  const trip = activeTrip();
+  trip.segments = trip.segments.filter(s=>s.id!==segId);
+  saveData();
+  await idbDelete('seg:' + segId);
+  renderView();
+  showToast('Eliminado');
+}
+
+/* ---------- Formatting helpers ---------- */
+function fmtDate(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  if(isNaN(d)) return '';
+  const opts = { weekday:'long', day:'numeric', month:'long' };
+  let s = d.toLocaleDateString('es-ES', opts);
+  return s.charAt(0).toUpperCase()+s.slice(1);
+}
+function fmtTime(iso){
+  if(!iso) return '--:--';
+  const d = new Date(iso);
+  if(isNaN(d)) return '--:--';
+  return d.toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
+}
+function fmtShort(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  if(isNaN(d)) return '';
+  return d.toLocaleDateString('es-ES', {day:'numeric', month:'short'});
+}
+function dayKey(iso){
+  if(!iso) return 'sin-fecha';
+  return iso.slice(0,10);
+}
+function escapeHtml(s){
+  return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function segIcon(type){ return {flight:'✈',hotel:'🏨',car:'🚗',note:'📝'}[type] || '•'; }
+function airlineCodeFromAirline(str){
+  if(!str) return '';
+  const m = str.trim().match(/([A-Z0-9]{2})\s+(\d{2,4})\s*$/i);
+  return m ? m[1].toUpperCase() : '';
+}
+function typeMarkHtml(seg){
+  if(seg.type==='flight'){
+    const code = airlineCodeFromAirline(seg.airline);
+    if(code){
+      return `<img src="https://images.kiwi.com/airlines/64/${code}.png" alt="${code}" style="width:100%;height:100%;object-fit:contain;padding:5px;border-radius:8px;" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'✈'}));">`;
+    }
+  }
+  return segIcon(seg.type);
+}
+
+/* ---------- Live status / map links (open when device has internet) ---------- */
+function flightCodeFromAirline(str){
+  if(!str) return '';
+  const m = str.trim().match(/([A-Z0-9]{2})\s+(\d{2,4})\s*$/i);
+  return m ? (m[1]+m[2]).toUpperCase() : '';
+}
+function liveLink(seg){
+  let url='', label='';
+  if(seg.type==='flight'){
+    if(seg.airline){
+      const q = seg.airline.trim();
+      url = 'https://www.google.com/search?q=' + encodeURIComponent(q);
+      label = '🔴 Estado en vivo';
+    } else {
+      const q = `estado vuelo ${seg.airline||''} ${seg.dep ? new Date(seg.dep).toLocaleDateString('es-ES') : ''}`.trim();
+      url = 'https://www.google.com/search?q=' + encodeURIComponent(q);
+      label = '🔴 Buscar estado';
+    }
+  } else if(seg.type==='hotel' && seg.addr){
+    url = 'https://www.google.com/maps/search/' + encodeURIComponent(seg.addr);
+    label = '📍 Mapa';
+  } else if(seg.type==='car' && (seg.from||seg.company)){
+    url = 'https://www.google.com/maps/search/' + encodeURIComponent(seg.from || seg.company);
+    label = '📍 Mapa';
+  }
+  if(!url) return '';
+  return `<a class="live-link" href="${url}" target="_blank" rel="noopener">${label}</a>`;
+}
+
+/* ---------- Packing checklist ---------- */
+function openPackingSheet(){
+  renderPackingList();
+  document.getElementById('packingOverlay').classList.add('show');
+}
+function closePackingSheet(){ document.getElementById('packingOverlay').classList.remove('show'); }
+function renderPackingList(){
+  const trip = activeTrip();
+  if(!trip.packing) trip.packing = [];
+  const list = document.getElementById('packingList');
+  list.innerHTML = trip.packing.length ? trip.packing.map(item=>`
+    <div class="packing-item ${item.checked?'checked':''}">
+      <input type="checkbox" ${item.checked?'checked':''} onchange="togglePackingItem('${item.id}')">
+      <span>${escapeHtml(item.text)}</span>
+      <button class="icon-action del" title="Eliminar" onclick="deletePackingItem('${item.id}')">${ICON_DELETE}</button>
+    </div>
+  `).join('') : '<p style="color:var(--text-dim); font-size:14.5px; padding:10px 0;">Todavía no has añadido nada.</p>';
+}
+function addPackingItem(){
+  const input = document.getElementById('packingNewItem');
+  const text = input.value.trim();
+  if(!text) return;
+  const trip = activeTrip();
+  if(!trip.packing) trip.packing = [];
+  trip.packing.push({id: uid(), text, checked:false});
+  saveData();
+  input.value = '';
+  renderPackingList();
+}
+function togglePackingItem(id){
+  const trip = activeTrip();
+  const item = trip.packing.find(p=>p.id===id);
+  if(item){ item.checked = !item.checked; saveData(); renderPackingList(); }
+}
+function deletePackingItem(id){
+  const trip = activeTrip();
+  trip.packing = trip.packing.filter(p=>p.id!==id);
+  saveData();
+  renderPackingList();
+}
+
+/* ---------- Calendar export (.ics — imports into Google Calendar, Samsung Calendar, etc.) ---------- */
+function icsDate(iso){
+  if(!iso) return '';
+  const clean = iso.replace(/[-:]/g,'');
+  return clean.length >= 15 ? clean.slice(0,15) : clean + '00';
+}
+function icsEscape(s){
+  return (s||'').replace(/([,;])/g, '\\$1').replace(/\n/g, '\\n');
+}
+function exportTripICS(){
+  const trip = activeTrip();
+  const lines = ['BEGIN:VCALENDAR','VERSION:2.0',"PRODID:-//JB's Airplane//ES",'CALSCALE:GREGORIAN'];
+  const stamp = icsDate(new Date().toISOString().slice(0,16));
+  let count = 0;
+
+  trip.segments.forEach(seg=>{
+    let start='', end='', summary='', location='', description='';
+    if(seg.type==='flight' && seg.dep){
+      start = seg.dep; end = seg.arr || seg.dep;
+      summary = `Vuelo ${seg.airline||''} ${seg.from||''} → ${seg.to||''}`;
+      location = `${seg.from||''} → ${seg.to||''}`;
+      description = `Localizador: ${seg.locator||'-'}`;
+    } else if(seg.type==='hotel' && seg.checkin){
+      start = seg.checkin; end = seg.checkout || seg.checkin;
+      summary = `Hotel: ${seg.name||''}`;
+      location = seg.addr||'';
+      description = `Reserva: ${seg.locator||'-'}`;
+    } else if(seg.type==='car' && seg.dep){
+      start = seg.dep; end = seg.arr || seg.dep;
+      summary = `Coche de alquiler: ${seg.company||''}`;
+      location = seg.from||'';
+      description = `Localizador: ${seg.locator||'-'}`;
+    } else if(seg.type==='note' && seg.when){
+      start = seg.when;
+      const d = new Date(seg.when); d.setHours(d.getHours()+1);
+      end = d.toISOString().slice(0,16);
+      summary = seg.title || 'Nota';
+      description = seg.detail || '';
+    }
+    if(!start) return;
+    count++;
+    lines.push('BEGIN:VEVENT');
+    lines.push('UID:' + seg.id + '@mis-viajes');
+    lines.push('DTSTAMP:' + stamp);
+    lines.push('DTSTART:' + icsDate(start));
+    lines.push('DTEND:' + icsDate(end));
+    lines.push('SUMMARY:' + icsEscape(summary));
+    if(location) lines.push('LOCATION:' + icsEscape(location));
+    if(description) lines.push('DESCRIPTION:' + icsEscape(description));
+    lines.push('END:VEVENT');
+  });
+
+  if(count === 0){ showToast('Nada que exportar todavía'); return; }
+  lines.push('END:VCALENDAR');
+  const blob = new Blob([lines.join('\r\n')], {type:'text/calendar'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = (trip.name.replace(/[^a-z0-9áéíóúñ]+/gi,'-') || 'viaje') + '.ics';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Calendario exportado — ábrelo para importarlo');
+}
+
+/* ---------- Share / print ---------- */
+function shareSegment(segId){
+  const trip = activeTrip();
+  const seg = trip.segments.find(s=>s.id===segId);
+  if(!seg) return;
+  let text = '';
+  if(seg.type==='flight'){
+    text = `✈ ${seg.airline||''}\n${seg.from||'?'} → ${seg.to||'?'}\n${fmtDate(seg.dep)} · ${fmtTime(seg.dep)} - ${fmtTime(seg.arr)}\nLocalizador: ${seg.locator||'-'}`;
+  } else if(seg.type==='hotel'){
+    text = `🏨 ${seg.name||''}\n${seg.addr||''}\nEntrada: ${fmtDate(seg.checkin)} ${fmtTime(seg.checkin)} · Salida: ${fmtDate(seg.checkout)} ${fmtTime(seg.checkout)}`;
+  } else if(seg.type==='car'){
+    text = `🚗 ${seg.company||''}\n${seg.from||''} → ${seg.to||''}\n${fmtDate(seg.dep)} ${fmtTime(seg.dep)} - ${fmtTime(seg.arr)}`;
+  } else if(seg.type==='note'){
+    text = `📝 ${seg.title||''}\n${fmtDate(seg.when)} ${fmtTime(seg.when)}\n${seg.detail||''}`;
+  }
+  if(navigator.share){
+    navigator.share({text}).catch(()=>{});
+  } else if(navigator.clipboard){
+    navigator.clipboard.writeText(text).then(()=>showToast('Copiado al portapapeles'));
+  } else {
+    showToast('No se pudo compartir en este navegador');
+  }
+}
+
+function shareTrip(){
+  const trip = activeTrip();
+  const sorted = [...trip.segments].sort((a,b)=> (a.sortTime||'9999').localeCompare(b.sortTime||'9999'));
+  let text = `✈ ${trip.name}\n\n`;
+  sorted.forEach(seg=>{
+    if(seg.type==='flight'){
+      text += `VUELO ${seg.airline||''}\n${seg.from||'?'} → ${seg.to||'?'}\n${fmtDate(seg.dep)} · ${fmtTime(seg.dep)} - ${fmtTime(seg.arr)}\nLocalizador: ${seg.locator||'-'}\n\n`;
+    } else if(seg.type==='hotel'){
+      text += `HOTEL ${seg.name||''}\n${seg.addr||''}\nEntrada: ${fmtDate(seg.checkin)} ${fmtTime(seg.checkin)} · Salida: ${fmtDate(seg.checkout)} ${fmtTime(seg.checkout)}\n\n`;
+    } else if(seg.type==='car'){
+      text += `COCHE ${seg.company||''}\n${seg.from||''} → ${seg.to||''}\n${fmtDate(seg.dep)} ${fmtTime(seg.dep)} - ${fmtTime(seg.arr)}\n\n`;
+    } else if(seg.type==='note'){
+      text += `NOTA: ${seg.title||''}\n${fmtDate(seg.when)} ${fmtTime(seg.when)}\n${seg.detail||''}\n\n`;
+    }
+  });
+
+  if(navigator.share){
+    navigator.share({ title: trip.name, text }).catch(()=>{});
+  } else {
+    window.print();
+  }
+}
+window.addEventListener('beforeprint', function(){
+  document.title = (activeTrip() ? activeTrip().name : "JB's Airplane") + ' — itinerario';
+});
+
+/* ---------- Timeline rendering (trip detail) ---------- */
+function renderCard(seg){
+  const statusClass = 'status-' + (seg.status||'confirmado');
+  let title='', sub='', timesHtml='', metaHtml='';
+
+  if(seg.type==='flight'){
+    title = seg.airline || 'Vuelo';
+    sub = seg.locator ? `Localizador ${seg.locator}` : '';
+    timesHtml = `
+      <div class="card-times">
+        <div class="time-block"><div class="t">${fmtTime(seg.dep)}</div><div class="p">${escapeHtml(seg.from||'')}</div>${tzDiffLabel(seg.from)?`<div class="tz-diff">${tzDiffLabel(seg.from)}</div>`:''}</div>
+        <div class="time-arrow"></div>
+        <div class="time-block"><div class="t">${fmtTime(seg.arr)}</div><div class="p">${escapeHtml(seg.to||'')}</div>${tzDiffLabel(seg.to)?`<div class="tz-diff">${tzDiffLabel(seg.to)}</div>`:''}</div>
+      </div>`;
+    metaHtml = `<div class="card-meta">${seg.gate?`<span><b>Puerta</b> ${escapeHtml(seg.gate)}</span>`:''}${seg.seat?`<span><b>Asiento</b> ${escapeHtml(seg.seat)}</span>`:''}</div><div class="live-status-result" id="livestatus_${seg.id}" style="display:none; margin-top:6px; font-size:13px; color:var(--confirmed);"></div>`;
+  } else if(seg.type==='hotel'){
+    title = seg.name || 'Hotel';
+    sub = seg.addr || '';
+    timesHtml = `
+      <div class="card-times">
+        <div class="time-block"><div class="t">${fmtTime(seg.checkin)}</div><div class="p">Entrada</div></div>
+        <div class="time-arrow"></div>
+        <div class="time-block"><div class="t">${fmtTime(seg.checkout)}</div><div class="p">Salida</div></div>
+      </div>`;
+    metaHtml = seg.locator ? `<div class="card-meta"><span><b>Reserva</b> ${escapeHtml(seg.locator)}</span></div>` : '';
+  } else if(seg.type==='car'){
+    title = seg.company || 'Coche de alquiler';
+    sub = seg.locator ? `Localizador ${seg.locator}` : '';
+    timesHtml = `
+      <div class="card-times">
+        <div class="time-block"><div class="t">${fmtTime(seg.dep)}</div><div class="p">${escapeHtml(seg.from||'Recogida')}</div></div>
+        <div class="time-arrow"></div>
+        <div class="time-block"><div class="t">${fmtTime(seg.arr)}</div><div class="p">${escapeHtml(seg.to||'Devolución')}</div></div>
+      </div>`;
+  } else if(seg.type==='note'){
+    title = seg.title || 'Nota';
+    sub = fmtTime(seg.when);
+    metaHtml = seg.detail ? `<div class="card-meta" style="font-family:var(--sans); white-space:pre-wrap;">${escapeHtml(seg.detail)}</div>` : '';
+  }
+
+  return `
+  <div class="card type-${seg.type}">
+    <div class="card-main">
+      <div class="type-mark">${typeMarkHtml(seg)}</div>
+      <div class="card-body">
+        <div class="card-toprow">
+          <div>
+            <p class="card-title">${escapeHtml(title)}</p>
+            ${sub ? `<p class="card-sub">${escapeHtml(sub)}</p>` : ''}
+          </div>
+          <span class="status-pill ${statusClass}">${seg.status||'confirmado'}</span>
+        </div>
+        ${timesHtml}
+        ${metaHtml}
+      </div>
+    </div>
+    <div class="stub">
+      <div class="stub-note">${escapeHtml(seg.note||'')}</div>
+      <div class="stub-actions">
+        ${seg.hasDocPhoto?`<div class="doc-thumb" id="docthumb_${seg.id}" title="Ver documento" onclick="openLightboxForSeg('${seg.id}')">📎</div>`:''}
+        ${liveLink(seg)}
+        <button class="icon-action" title="Más opciones" onclick="openCardMenu('${seg.id}')">⋯</button>
+      </div>
+    </div>
+    <div class="punch left"></div><div class="punch right"></div>
+  </div>`;
+}
+
+function segMatchesSearch(seg, q){
+  if(!q) return true;
+  const hay = [
+    seg.airline, seg.locator, seg.from, seg.to, seg.name, seg.addr, seg.company,
+    seg.title, seg.detail, seg.note
+  ].filter(Boolean).join(' ').toLowerCase();
+  return hay.includes(q);
+}
+function renderPassportWarning(trip){
+  const el = document.getElementById('passportWarning');
+  if(!el) return;
+  const passports = getPassports(trip).filter(p=>p.expiry);
+  if(!passports.length){ el.innerHTML = ''; return; }
+  const flights = trip.segments.filter(s=>s.type==='flight' && (s.arr||s.dep));
+  if(!flights.length){ el.innerHTML = ''; return; }
+  const lastDateStr = flights.map(s=>s.arr||s.dep).sort().slice(-1)[0];
+  const lastDate = new Date(lastDateStr);
+  const sixMonthsAfter = new Date(lastDate);
+  sixMonthsAfter.setMonth(sixMonthsAfter.getMonth() + 6);
+
+  const problems = passports.filter(p => new Date(p.expiry + 'T00:00') < sixMonthsAfter);
+  if(!problems.length){ el.innerHTML = ''; return; }
+
+  const items = problems.map(p=>{
+    const expiry = new Date(p.expiry + 'T00:00');
+    const pastTrip = expiry < lastDate;
+    const label = p.name ? escapeHtml(p.name) : 'Pasaporte';
+    return `<div>${label}: vence el ${fmtShort(p.expiry)}${pastTrip ? ' — antes de terminar el viaje' : ' — no cumple la regla de los 6 meses'}</div>`;
+  }).join('');
+  el.innerHTML = `<div class="passport-warning">⚠️<div><b>${problems.length>1?'Revisa estos pasaportes':'Revisa este pasaporte'}</b>${items}<div style="margin-top:4px; opacity:.85;">Muchos países exigen al menos 6 meses de validez desde la fecha de entrada.</div></div></div>`;
+}
+
+function computeConnectors(sortedSegs){
+  const map = {};
+  for(let i=0; i<sortedSegs.length-1; i++){
+    const a = sortedSegs[i], b = sortedSegs[i+1];
+    if(a.type!=='flight' || b.type!=='flight') continue;
+    if(!a.arr || !b.dep || !a.to || !b.from) continue;
+    if(a.to !== b.from) continue;
+    const gapMin = (new Date(b.dep) - new Date(a.arr)) / 60000;
+    if(gapMin <= 0 || gapMin > 24*60) continue;
+    const h = Math.floor(gapMin/60), m = Math.round(gapMin%60);
+    map[a.id] = h>0 ? `${h}h ${m}min` : `${m}min`;
+  }
+  return map;
+}
+function dayHeaderHtml(dayKeyStr){
+  const d = new Date(dayKeyStr + 'T00:00');
+  const dow = d.toLocaleDateString('es-ES', {weekday:'long'});
+  const month = d.toLocaleDateString('es-ES', {month:'long'});
+  const dayNum = d.getDate();
+  return `<div class="day-label-block">
+    <div class="day-num">${dayNum}</div>
+    <div><div class="day-dow">${dow}</div><div class="day-month">${month}</div></div>
+  </div>`;
+}
+function segEndTime(seg){
+  // Best estimate of when a segment "finishes", for past/upcoming comparison
+  return seg.arr || seg.checkout || seg.when || seg.sortTime || '';
+}
+function renderTimeline(autoScroll){
+  const trip = activeTrip();
+  const timeline = document.getElementById('timeline');
+  renderPassportWarning(trip);
+  const searchEl = document.getElementById('searchInput');
+  const q = searchEl ? searchEl.value.trim().toLowerCase() : '';
+
+  if(!trip.segments.length){
+    timeline.innerHTML = `
+      <div class="empty-state">
+        <div class="glyph">🧳</div>
+        <h2>Sin elementos todavía</h2>
+        <p>Añade tu primer vuelo, hotel, coche de alquiler<br>o nota para "${escapeHtml(trip.name)}".</p>
+        <button onclick="openAddSheet()">+ Añadir elemento</button>
+      </div>`;
+    return;
+  }
+
+  const filtered = trip.segments.filter(s=>segMatchesSearch(s, q));
+  if(!filtered.length){
+    timeline.innerHTML = `<div class="empty-state"><div class="glyph">🔍</div><h2>Sin resultados</h2><p>Nada coincide con "${escapeHtml(q)}".</p></div>`;
+    return;
+  }
+
+  const sorted = [...filtered].sort((a,b)=> (a.sortTime||'9999').localeCompare(b.sortTime||'9999'));
+  const groups = {};
+  sorted.forEach(seg=>{
+    const k = dayKey(seg.sortTime);
+    if(!groups[k]) groups[k]=[];
+    groups[k].push(seg);
+  });
+
+  const keys = Object.keys(groups).sort();
+  const nowIso = new Date().toISOString().slice(0,16);
+  const pastKeys = [];
+  const upcomingKeys = [];
+  keys.forEach(k=>{
+    const groupEnd = groups[k].map(segEndTime).sort().slice(-1)[0] || '';
+    const isPast = groupEnd && groupEnd < nowIso;
+    (isPast ? pastKeys : upcomingKeys).push(k);
+  });
+
+  const connectors = computeConnectors(sorted);
+  const dayGroupHtml = (k)=>{
+    const labelHtml = k==='sin-fecha'
+      ? `<p class="day-label">Sin fecha asignada</p>`
+      : dayHeaderHtml(k);
+    const cardsHtml = groups[k].map(seg=>{
+      const c = connectors[seg.id];
+      return renderCard(seg) + (c ? `<div class="connector">🔄 <b>${c}</b> de conexión en ${escapeHtml(seg.to||'')}</div>` : '');
+    }).join('');
+    return `<div class="day-group">${labelHtml}${cardsHtml}</div>`;
+  };
+
+  let html = '';
+  if(pastKeys.length && !q){
+    const pastCount = pastKeys.reduce((n,k)=>n+groups[k].length, 0);
+    html += `<details class="past-details"><summary>Ya pasado (${pastCount})</summary>${pastKeys.map(dayGroupHtml).join('')}</details>`;
+  } else if(pastKeys.length){
+    html += pastKeys.map(dayGroupHtml).join(''); // keep visible while searching
+  }
+  html += `<div id="upcomingAnchor"></div>` + upcomingKeys.map(dayGroupHtml).join('');
+  timeline.innerHTML = html;
+
+  if(autoScroll){
+    setTimeout(()=>{
+      const anchor = document.getElementById('upcomingAnchor');
+      if(anchor) anchor.scrollIntoView({behavior:'smooth', block:'start'});
+    }, 80);
+  }
+  ensureDocThumbnails(trip);
+}
+async function ensureDocThumbnails(trip){
+  for(const seg of trip.segments){
+    if(!seg.hasDocPhoto) continue;
+    const el = document.getElementById('docthumb_' + seg.id);
+    if(!el) continue;
+    try{
+      const dataUrl = await idbGet('seg:' + seg.id);
+      if(dataUrl){ el.style.backgroundImage = `url('${dataUrl}')`; el.textContent = ''; }
+    }catch(e){}
+  }
+}
+
+/* ---------- Backup / restore ---------- */
+function exportBackup(){
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const d = new Date().toISOString().slice(0,10);
+  a.href = url; a.download = `mis-viajes-copia-${d}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Copia exportada');
+}
+function importBackup(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const data = JSON.parse(e.target.result);
+      if(!data.trips) throw new Error('formato inválido');
+      if(!confirm('Esto reemplazará los datos actuales por los del archivo. ¿Continuar?')) return;
+      state = data;
+      saveData();
+      goHome();
+      showToast('Copia importada');
+    }catch(err){
+      alert('No se pudo leer el archivo. Asegúrate de que es una copia exportada desde esta misma app.');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+/* ---------- Toast ---------- */
+let toastTimer;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 1800);
+}
+
+/* ---------- Paste / smart import ---------- */
+function openPasteSheet(){
+  document.getElementById('pasteInput').value = '';
+  document.getElementById('pasteOverlay').classList.add('show');
+}
+function closePasteSheet(){ document.getElementById('pasteOverlay').classList.remove('show'); }
+
+function analyzePaste(){
+  const raw = document.getElementById('pasteInput').value.trim();
+  if(!raw){ closePasteSheet(); return; }
+
+  let asJson = null;
+  try{ asJson = JSON.parse(raw); }catch(e){ asJson = null; }
+
+  if(asJson){
+    const items = Array.isArray(asJson) ? asJson : [asJson];
+    const valid = items.filter(it => it && ['flight','hotel','car','note'].includes(it.type));
+    if(valid.length){
+      const trip = activeTrip();
+      valid.forEach(it=>{
+        const seg = {...it, id: uid()};
+        if(!seg.sortTime) seg.sortTime = seg.dep || seg.checkin || seg.when || '';
+        if(!seg.status) seg.status = 'confirmado';
+        trip.segments.push(seg);
+      });
+      saveData();
+      closePasteSheet();
+      renderView();
+      showToast(valid.length===1 ? '1 elemento importado' : valid.length+' elementos importados');
+      return;
+    }
+  }
+
+  const guess = parseFreeText(raw);
+  closePasteSheet();
+  editingId = null;
+  document.getElementById('sheetTitle').textContent = 'Revisa los datos detectados';
+  document.getElementById('segForm').reset();
+  setSegType(guess.type);
+
+  if(guess.type==='flight'){
+    setv('f_airline', guess.airline); setv('f_locator', guess.locator);
+    setv('f_from', guess.from); setv('f_to', guess.to);
+    setv('f_dep', guess.dep); setv('f_arr', guess.arr);
+  } else if(guess.type==='hotel'){
+    setv('h_name', guess.name); setv('h_addr', guess.addr);
+    setv('h_in', guess.dep); setv('h_out', guess.arr);
+    setv('h_locator', guess.locator);
+  } else if(guess.type==='car'){
+    setv('c_company', guess.name); setv('c_locator', guess.locator);
+    setv('c_from', guess.from); setv('c_to', guess.to);
+    setv('c_dep', guess.dep); setv('c_arr', guess.arr);
+  } else {
+    setv('n_title', guess.name || 'Reserva pegada');
+    setv('n_when', guess.dep);
+    setv('n_detail', raw.slice(0, 600));
+  }
+  setv('seg_status', 'pendiente');
+  setv('seg_note', 'Detectado automáticamente — revisa los datos antes de guardar');
+  document.getElementById('segOverlay').classList.add('show');
+}
+
+function parseFreeText(text){
+  const lower = text.toLowerCase();
+  let type = 'note';
+  if(/vuelo|flight|boarding|puerta de embarque|asiento|seat|aerol[íi]nea/.test(lower)) type = 'flight';
+  else if(/check-?in|check-?out|hotel|habitaci[oó]n|room|alojamiento/.test(lower)) type = 'hotel';
+  else if(/alquiler|rental|recogida|devoluci[oó]n|pick-?up|drop-?off|rent a car/.test(lower)) type = 'car';
+
+  const result = { type, airline:'', name:'', locator:'', from:'', to:'', addr:'', dep:'', arr:'' };
+
+  let m = text.match(/(?:localizador|locator|confirmaci[oó]n|confirmation|booking(?:\s*number)?|reserva|pnr)[:\s#-]*([A-Z0-9]{5,8})\b/i);
+  if(m) result.locator = m[1].toUpperCase();
+
+  m = text.match(/\b([A-Z]{2})\s?-?\s?(\d{2,4})\b/);
+  if(m && type==='flight') result.airline = m[1] + m[2];
+
+  const codes = [...text.matchAll(/\b([A-Z]{3})\b/g)].map(x=>x[1]).filter(c => !['UTC','GMT','PDF'].includes(c));
+  if(type==='flight' && codes.length>=2){ result.from = codes[0]; result.to = codes[1]; }
+
+  if(type==='hotel' || type==='car'){
+    const firstLine = text.split('\n').map(l=>l.trim()).find(l=>l.length>2 && l.length<60);
+    if(firstLine) result.name = firstLine;
+    const addrMatch = text.match(/(?:direcci[oó]n|address)[:\s]*(.+)/i);
+    if(addrMatch) result.addr = addrMatch[1].trim().slice(0,120);
+  }
+
+  const dateTimes = extractDateTimes(text);
+  if(dateTimes.length>0) result.dep = dateTimes[0];
+  if(dateTimes.length>1) result.arr = dateTimes[1];
+
+  return result;
+}
+
+function extractDateTimes(text){
+  const found = [];
+  const months = {enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,septiembre:9,octubre:10,noviembre:11,diciembre:12,
+    jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+
+  const patterns = [
+    /(\d{4})-(\d{2})-(\d{2})[T\s]+(\d{1,2}):(\d{2})/g,
+    /(\d{1,2})\/(\d{1,2})\/(\d{4})\D{1,5}(\d{1,2}):(\d{2})/g,
+    /(\d{1,2})\s+de\s+([a-zA-Zé]+)\s+(?:de\s+)?(\d{4})\D{1,5}(\d{1,2}):(\d{2})/gi,
+    /(\d{1,2})\s+([a-zA-Zé]+)\.?\s+(\d{4})\D{1,5}(\d{1,2}):(\d{2})/gi
+  ];
+
+  let m;
+  while((m = patterns[0].exec(text))){
+    found.push(`${m[1]}-${pad(m[2])}-${pad(m[3])}T${pad(m[4])}:${pad(m[5])}`);
+  }
+  while((m = patterns[1].exec(text))){
+    found.push(`${m[3]}-${pad(m[2])}-${pad(m[1])}T${pad(m[4])}:${pad(m[5])}`);
+  }
+  [patterns[2], patterns[3]].forEach(re=>{
+    while((m = re.exec(text))){
+      const mon = months[m[2].toLowerCase().slice(0,3)] || months[m[2].toLowerCase()];
+      if(mon) found.push(`${m[3]}-${pad(mon)}-${pad(m[1])}T${pad(m[4])}:${pad(m[5])}`);
+    }
+  });
+  return found.sort();
+}
+function pad(n){ return String(n).padStart(2,'0'); }
+
+/* ---------- Poster helpers (offline flag/gradient, optional user photo) ---------- */
+const AIRPORT_INFO = {
+  GRU:{city:'São Paulo', country:'Brasil', tz:'America/Sao_Paulo', lat:-23.55, lon:-46.63}, CGH:{city:'São Paulo', country:'Brasil', tz:'America/Sao_Paulo', lat:-23.55, lon:-46.63}, VCP:{city:'São Paulo', country:'Brasil', tz:'America/Sao_Paulo', lat:-23.55, lon:-46.63},
+  SSA:{city:'Salvador', country:'Brasil', tz:'America/Bahia', lat:-12.97, lon:-38.51}, BSB:{city:'Brasília', country:'Brasil', tz:'America/Sao_Paulo', lat:-15.79, lon:-47.88}, MAO:{city:'Manaus', country:'Brasil', tz:'America/Manaus', lat:-3.10, lon:-60.02},
+  GIG:{city:'Río de Janeiro', country:'Brasil', tz:'America/Sao_Paulo', lat:-22.91, lon:-43.17}, SDU:{city:'Río de Janeiro', country:'Brasil', tz:'America/Sao_Paulo', lat:-22.91, lon:-43.17},
+  REC:{city:'Recife', country:'Brasil', tz:'America/Recife', lat:-8.05, lon:-34.90}, FOR:{city:'Fortaleza', country:'Brasil', tz:'America/Fortaleza', lat:-3.73, lon:-38.53}, POA:{city:'Porto Alegre', country:'Brasil', tz:'America/Sao_Paulo', lat:-30.03, lon:-51.23},
+  CWB:{city:'Curitiba', country:'Brasil', tz:'America/Sao_Paulo', lat:-25.43, lon:-49.27}, BEL:{city:'Belém', country:'Brasil', tz:'America/Belem', lat:-1.46, lon:-48.50}, CNF:{city:'Belo Horizonte', country:'Brasil', tz:'America/Sao_Paulo', lat:-19.92, lon:-43.94},
+  VIX:{city:'Vitória', country:'Brasil', tz:'America/Sao_Paulo', lat:-20.32, lon:-40.34}, NAT:{city:'Natal', country:'Brasil', tz:'America/Fortaleza', lat:-5.79, lon:-35.21},
+  MAD:{city:'Madrid', country:'España', tz:'Europe/Madrid', lat:40.42, lon:-3.70}, BCN:{city:'Barcelona', country:'España', tz:'Europe/Madrid', lat:41.39, lon:2.17}, AGP:{city:'Málaga', country:'España', tz:'Europe/Madrid', lat:36.72, lon:-4.42},
+  VLC:{city:'Valencia', country:'España', tz:'Europe/Madrid', lat:39.47, lon:-0.38}, SVQ:{city:'Sevilla', country:'España', tz:'Europe/Madrid', lat:37.39, lon:-5.99}, PMI:{city:'Palma de Mallorca', country:'España', tz:'Europe/Madrid', lat:39.57, lon:2.65}, BIO:{city:'Bilbao', country:'España', tz:'Europe/Madrid', lat:43.26, lon:-2.93},
+  MEX:{city:'Ciudad de México', country:'México', tz:'America/Mexico_City', lat:19.43, lon:-99.13}, CUN:{city:'Cancún', country:'México', tz:'America/Cancun', lat:21.16, lon:-86.85}, GDL:{city:'Guadalajara', country:'México', tz:'America/Mexico_City', lat:20.66, lon:-103.35}, MTY:{city:'Monterrey', country:'México', tz:'America/Monterrey', lat:25.69, lon:-100.32},
+  SDQ:{city:'Santo Domingo', country:'República Dominicana', tz:'America/Santo_Domingo', lat:18.48, lon:-69.89}, PUJ:{city:'Punta Cana', country:'República Dominicana', tz:'America/Santo_Domingo', lat:18.58, lon:-68.41}, STI:{city:'Santiago', country:'República Dominicana', tz:'America/Santo_Domingo', lat:19.45, lon:-70.70},
+  PTY:{city:'Ciudad de Panamá', country:'Panamá', tz:'America/Panama', lat:8.99, lon:-79.52},
+  MBJ:{city:'Montego Bay', country:'Jamaica', tz:'America/Jamaica', lat:18.47, lon:-77.92}, KIN:{city:'Kingston', country:'Jamaica', tz:'America/Jamaica', lat:17.97, lon:-76.79},
+  LIS:{city:'Lisboa', country:'Portugal', tz:'Europe/Lisbon', lat:38.72, lon:-9.14}, OPO:{city:'Oporto', country:'Portugal', tz:'Europe/Lisbon', lat:41.15, lon:-8.61},
+  MIA:{city:'Miami', country:'Estados Unidos', tz:'America/New_York', lat:25.76, lon:-80.19}, JFK:{city:'Nueva York', country:'Estados Unidos', tz:'America/New_York', lat:40.71, lon:-74.01}, LAX:{city:'Los Ángeles', country:'Estados Unidos', tz:'America/Los_Angeles', lat:34.05, lon:-118.24}, EWR:{city:'Nueva York', country:'Estados Unidos', tz:'America/New_York', lat:40.71, lon:-74.01},
+  EZE:{city:'Buenos Aires', country:'Argentina', tz:'America/Argentina/Buenos_Aires', lat:-34.60, lon:-58.38}, AEP:{city:'Buenos Aires', country:'Argentina', tz:'America/Argentina/Buenos_Aires', lat:-34.60, lon:-58.38},
+  SCL:{city:'Santiago', country:'Chile', tz:'America/Santiago', lat:-33.45, lon:-70.67},
+  BOG:{city:'Bogotá', country:'Colombia', tz:'America/Bogota', lat:4.71, lon:-74.07},
+  LIM:{city:'Lima', country:'Perú', tz:'America/Lima', lat:-12.05, lon:-77.04}
+};
+function localNowStr(code){
+  const info = AIRPORT_INFO[code];
+  if(!info || !info.tz) return '';
+  try{
+    return new Intl.DateTimeFormat('es-ES', {hour:'2-digit', minute:'2-digit', timeZone: info.tz}).format(new Date());
+  }catch(e){ return ''; }
+}
+function tzOffsetMinutes(tz, date){
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz, hour12:false, year:'numeric', month:'2-digit', day:'2-digit',
+    hour:'2-digit', minute:'2-digit', second:'2-digit'
+  });
+  const parts = {};
+  dtf.formatToParts(date).forEach(p=>{ if(p.type!=='literal') parts[p.type]=p.value; });
+  let hour = parseInt(parts.hour, 10);
+  if(hour === 24) hour = 0;
+  const asUTC = Date.UTC(parts.year, parts.month-1, parts.day, hour, parts.minute, parts.second);
+  return (asUTC - date.getTime()) / 60000;
+}
+function tzDiffLabel(code){
+  const info = AIRPORT_INFO[code];
+  if(!info || !info.tz) return '';
+  try{
+    const now = new Date();
+    const targetOffset = tzOffsetMinutes(info.tz, now);
+    const localOffset = -now.getTimezoneOffset();
+    const diffHours = Math.round((targetOffset - localOffset) / 30) / 2; // nearest half hour
+    if(diffHours === 0) return 'Misma hora';
+    const sign = diffHours > 0 ? '+' : '';
+    const val = Number.isInteger(diffHours) ? diffHours : diffHours.toFixed(1);
+    return `${sign}${val}h`;
+  }catch(e){ return ''; }
+}
+const COUNTRY_STYLE = {
+  'Brasil':{flag:'🇧🇷', c1:'#0e7a4f', c2:'#f4c430'},
+  'España':{flag:'🇪🇸', c1:'#aa151b', c2:'#f1bf00'},
+  'México':{flag:'🇲🇽', c1:'#006341', c2:'#8a1538'},
+  'República Dominicana':{flag:'🇩🇴', c1:'#002d62', c2:'#ce1126'},
+  'Panamá':{flag:'🇵🇦', c1:'#005293', c2:'#d21034'},
+  'Jamaica':{flag:'🇯🇲', c1:'#009b3a', c2:'#8a6a1f'},
+  'Portugal':{flag:'🇵🇹', c1:'#046a38', c2:'#da291c'},
+  'Estados Unidos':{flag:'🇺🇸', c1:'#2c3e6e', c2:'#a12030'},
+  'Argentina':{flag:'🇦🇷', c1:'#6cace4', c2:'#f6b40e'},
+  'Chile':{flag:'🇨🇱', c1:'#0039a6', c2:'#d52b1e'},
+  'Colombia':{flag:'🇨🇴', c1:'#fcd116', c2:'#003893'},
+  'Perú':{flag:'🇵🇪', c1:'#d91023', c2:'#8a1538'},
+  'default':{flag:'🧳', c1:'#1c2333', c2:'#3a4a6b'}
+};
+
+/* Finds the "real" destination of a (possibly round-trip) itinerary: the
+   airport where the longest gap between consecutive flights occurs — i.e.
+   where the traveler actually stayed, not just a connecting airport. */
+function computeFinalDestination(flights){
+  if(flights.length===0) return '';
+  if(flights.length===1) return flights[0].to || flights[0].from || '';
+  let maxGap = -Infinity, idx = flights.length-1;
+  for(let i=0;i<flights.length-1;i++){
+    const arr = new Date(flights[i].arr).getTime();
+    const dep = new Date(flights[i+1].dep).getTime();
+    if(isNaN(arr) || isNaN(dep)) continue;
+    const gap = dep - arr;
+    if(gap > maxGap){ maxGap = gap; idx = i; }
+  }
+  return flights[idx].to || flights[idx].from || '';
+}
+
+function daysUntil(iso){
+  if(!iso) return null;
+  const target = new Date(iso); target.setHours(0,0,0,0);
+  const now = new Date(); now.setHours(0,0,0,0);
+  return Math.round((target-now)/86400000);
+}
+function countdownLabel(first, last){
+  if(!first) return '';
+  const d = daysUntil(first.dep);
+  if(d === null) return '';
+  if(d > 1) return `en ${d} días`;
+  if(d === 1) return 'mañana';
+  if(d === 0) return 'hoy';
+  if(last){
+    const dEnd = daysUntil(last.arr);
+    if(dEnd !== null && dEnd >= 0) return 'en curso';
+  }
+  return '';
+}
+function nearestUpcomingTrip(){
+  let best = null, bestDays = Infinity;
+  state.trips.forEach(t=>{
+    const flights = t.segments.filter(s=>s.type==='flight' && s.dep).sort((a,b)=> new Date(a.dep)-new Date(b.dep));
+    if(!flights.length) return;
+    const d = daysUntil(flights[0].dep);
+    if(d !== null && d >= 0 && d < bestDays){ bestDays = d; best = t; }
+  });
+  return best ? {trip: best, days: bestDays} : null;
+}
+/* ---------- Home-screen extras: app icon badge + "next trip" shortcut ----------
+   These only take effect once the app has been added to the home screen
+   (installed as a PWA) — opening it as a regular browser tab won't show them. */
+function updateAppBadge(){
+  if(!('setAppBadge' in navigator)) return;
+  try{
+    const nearest = nearestUpcomingTrip();
+    if(nearest){
+      navigator.setAppBadge(Math.max(1, nearest.days)).catch(()=>{});
+    } else if('clearAppBadge' in navigator){
+      navigator.clearAppBadge().catch(()=>{});
+    }
+  }catch(e){}
+}
+function handleShortcutRouting(){
+  try{
+    const params = new URLSearchParams(location.search);
+    if(params.get('open') === 'next'){
+      const nearest = nearestUpcomingTrip();
+      if(nearest){ state.activeTripId = nearest.trip.id; currentView = 'trip'; saveData(); }
+    }
+  }catch(e){}
+}
+
+function tripPosterData(trip){
+  const flights = trip.segments
+    .filter(s=>s.type==='flight' && s.dep && s.arr)
+    .sort((a,b)=> new Date(a.dep) - new Date(b.dep));
+  const first = flights[0], last = flights[flights.length-1];
+  const destCode = computeFinalDestination(flights);
+  const info = AIRPORT_INFO[destCode] || null;
+  const country = info ? info.country : null;
+  const style = country ? (COUNTRY_STYLE[country] || COUNTRY_STYLE.default) : COUNTRY_STYLE.default;
+  const title = info ? `${info.city} (${info.country})` : (country || null);
+  const hotels = trip.segments.filter(s=>s.type==='hotel').length;
+  return {
+    title: title || trip.name,
+    cityRaw: info ? info.city : null,
+    countryRaw: country,
+    flag: style.flag, c1: style.c1, c2: style.c2,
+    dateStart: first ? fmtShort(first.dep) : '',
+    dateEnd: last ? fmtShort(last.arr) : '',
+    countdown: countdownLabel(first, last),
+    flightCount: flights.length,
+    hotelCount: hotels,
+    photo: trip.autoPhoto || null,
+    hasUserPhoto: !!trip.photo
+  };
+}
+
+function isTripPast(trip){
+  const flights = trip.segments.filter(s=>s.type==='flight' && s.arr);
+  if(!flights.length) return false; // no dates yet — treat as upcoming/unknown
+  const lastArr = flights.map(s=>s.arr).sort().slice(-1)[0];
+  return new Date(lastArr) < new Date();
+}
+function posterCardHtml(t){
+  const p = tripPosterData(t);
+  const cardBg = p.photo ? '' : `background-image:linear-gradient(135deg, ${p.c1}, ${p.c2});`;
+  const photoLayer = p.photo
+    ? `<div class="poster-photo" style="background-image:linear-gradient(180deg, rgba(20,24,36,.15), rgba(20,24,36,.75)), url('${p.photo}');"></div>`
+    : '';
+  const meta = (p.flightCount || p.hotelCount)
+    ? `<div class="poster-meta">${p.flightCount?`✈ ${p.flightCount}`:''} ${p.hotelCount?`🏨 ${p.hotelCount}`:''}</div>` : '';
+  return `
+    <div class="poster-card" id="postercard_${t.id}" style="${cardBg}" onclick="openTrip('${t.id}')">
+      ${photoLayer}
+      <div class="poster-flag">${p.flag}</div>
+      ${p.countdown?`<div class="poster-badge">${p.countdown}</div>`:''}
+      <div class="poster-weather" id="weather_${t.id}" style="display:none;"></div>
+      <div class="poster-bottom">
+        <div class="poster-title">${escapeHtml(p.title)}</div>
+        <div class="poster-name">${escapeHtml(t.name)}</div>
+        ${(p.dateStart||p.dateEnd) ? `<div class="poster-dates">${p.dateStart}${p.dateEnd?' → '+p.dateEnd:''}</div>` : ''}
+        ${meta}
+      </div>
+    </div>`;
+}
+async function ensureUserPhotos(){
+  for(const t of state.trips){
+    if(!t.photo) continue;
+    const card = document.getElementById('postercard_' + t.id);
+    if(!card) continue;
+    try{
+      const dataUrl = await idbGet('trip:' + t.id);
+      if(!dataUrl) continue;
+      let layer = card.querySelector('.poster-photo');
+      if(!layer){
+        layer = document.createElement('div');
+        layer.className = 'poster-photo';
+        card.insertBefore(layer, card.firstChild);
+      }
+      layer.style.backgroundImage = `linear-gradient(180deg, rgba(20,24,36,.15), rgba(20,24,36,.75)), url('${dataUrl}')`;
+      card.style.backgroundImage = '';
+    }catch(e){}
+  }
+}
+function renderPosters(){
+  const wrap = document.getElementById('posterGrid');
+  const pastGrid = document.getElementById('pastGrid');
+  const pastDetails = document.getElementById('pastDetails');
+  const pastSummary = document.getElementById('pastSummary');
+
+  if(!state.trips.length){
+    wrap.innerHTML = '';
+    pastDetails.style.display = 'none';
+    return;
+  }
+
+  const upcoming = state.trips.filter(t=>!isTripPast(t));
+  const past = state.trips.filter(t=>isTripPast(t));
+
+  wrap.innerHTML = upcoming.map(posterCardHtml).join('')
+    + `<div class="poster-card poster-add" onclick="promptNewTrip()"><div class="poster-add-plus">+</div><div class="poster-add-label">Nuevo viaje</div></div>`;
+
+  if(past.length){
+    pastDetails.style.display = 'block';
+    pastSummary.textContent = `Viajes pasados (${past.length})`;
+    pastGrid.innerHTML = past.map(posterCardHtml).join('');
+  } else {
+    pastDetails.style.display = 'none';
+    pastGrid.innerHTML = '';
+  }
+
+  ensureAutoPhotos();
+  ensureWeather();
+  ensureUserPhotos();
+}
+
+/* ---------- Weather forecast (Open-Meteo — free, no key, CORS-enabled) ---------- */
+function weatherIcon(code){
+  if(code===0) return '☀️';
+  if(code>=1 && code<=3) return '⛅';
+  if(code===45 || code===48) return '🌫️';
+  if(code>=51 && code<=67) return '🌧️';
+  if(code>=71 && code<=77) return '❄️';
+  if(code>=80 && code<=82) return '🌦️';
+  if(code>=95) return '⛈️';
+  return '🌡️';
+}
+async function fetchWeather(lat, lon, dateStr){
+  try{
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,temperature_2m_max&timezone=auto&start_date=${dateStr}&end_date=${dateStr}`);
+    const data = await res.json();
+    if(data && data.daily && data.daily.temperature_2m_max && data.daily.temperature_2m_max.length){
+      return { temp: Math.round(data.daily.temperature_2m_max[0]), code: data.daily.weathercode[0] };
+    }
+  }catch(e){}
+  return null;
+}
+let weatherBusy = false;
+async function ensureWeather(){
+  if(weatherBusy) return;
+  weatherBusy = true;
+  for(const t of state.trips){
+    const el = document.getElementById('weather_' + t.id);
+    if(!el) continue;
+    const flights = t.segments.filter(s=>s.type==='flight' && s.dep).sort((a,b)=> new Date(a.dep)-new Date(b.dep));
+    if(!flights.length){ continue; }
+    const destCode = computeFinalDestination(flights.filter(s=>s.arr));
+    const info = AIRPORT_INFO[destCode];
+    if(!info || info.lat===undefined) continue;
+    const tripDate = new Date(flights[0].dep);
+    const daysAway = Math.round((tripDate.setHours(0,0,0,0) - new Date().setHours(0,0,0,0)) / 86400000);
+    if(daysAway < 0 || daysAway > 15){ continue; } // outside Open-Meteo's free forecast window
+    const dateStr = flights[0].dep.slice(0,10);
+    const w = await fetchWeather(info.lat, info.lon, dateStr);
+    if(w){
+      el.textContent = `${weatherIcon(w.code)} ${w.temp}°`;
+      el.style.display = 'flex';
+    }
+  }
+  weatherBusy = false;
+}
+
+/* ---------- Auto destination photos (Wikipedia — free, no key, CORS-enabled) ---------- */
+function testImageLoads(url){
+  return new Promise((resolve)=>{
+    if(!url){ resolve(false); return; }
+    const img = new Image();
+    let done = false;
+    const finish = (ok)=>{ if(!done){ done=true; resolve(ok); } };
+    img.onload = ()=>finish(true);
+    img.onerror = ()=>finish(false);
+    img.src = url;
+    setTimeout(()=>finish(false), 6000);
+  });
+}
+async function fetchCityPhoto(city, country){
+  const cacheKey = 'cityPhotoV2:' + city;
+  const cached = localStorage.getItem(cacheKey);
+  if(cached !== null) return cached === '' ? null : cached;
+  let url = null;
+  try{
+    let res = await fetch('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(city));
+    let data = await res.json();
+    if(data && data.thumbnail && data.thumbnail.source){
+      url = data.thumbnail.source.replace(/\/\d+px-/, '/800px-');
+    } else if(data && data.type === 'disambiguation' && country){
+      res = await fetch('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(city + ', ' + country));
+      data = await res.json();
+      if(data && data.thumbnail && data.thumbnail.source){
+        url = data.thumbnail.source.replace(/\/\d+px-/, '/800px-');
+      }
+    }
+  }catch(e){ url = null; }
+  // Only accept the URL if the image genuinely loads — a fetch can succeed
+  // while the actual image is blocked (e.g. opening the file via a content:// link).
+  const loads = await testImageLoads(url);
+  if(!loads) url = null;
+  try{ localStorage.setItem(cacheKey, url || ''); }catch(e){}
+  return url;
+}
+const AUTO_PHOTO_VERSION = 2; // bump this if the validation logic changes again
+let autoPhotoBusy = false;
+async function ensureAutoPhotos(){
+  if(autoPhotoBusy) return;
+  autoPhotoBusy = true;
+  let changed = false;
+  for(const t of state.trips){
+    if(t.photo) continue; // user's own photo always wins
+    const p = tripPosterData(t);
+    if(!p.cityRaw) continue;
+    if(t.autoPhotoCity === p.cityRaw && t.autoPhotoVersion === AUTO_PHOTO_VERSION) continue; // already checked with current logic
+    const url = await fetchCityPhoto(p.cityRaw, p.countryRaw);
+    t.autoPhoto = url || null;
+    t.autoPhotoCity = p.cityRaw;
+    t.autoPhotoVersion = AUTO_PHOTO_VERSION;
+    changed = true;
+  }
+  autoPhotoBusy = false;
+  if(changed){
+    saveData();
+    if(currentView === 'home') renderPosters();
+  }
+}
+
+function populateAirportList(){
+  const list = document.getElementById('airportCodes');
+  if(!list) return;
+  // User's frequent routes shown first
+  const priority = ['MAD','PMI','CUN','SDQ','PUJ','STI','BSB','GRU','CGH','GIG','SDU'];
+  const codes = [...priority, ...Object.keys(AIRPORT_INFO).filter(c=>!priority.includes(c))];
+  list.innerHTML = codes.map(c=>{
+    const info = AIRPORT_INFO[c];
+    return `<option value="${c}">${c} — ${info.city}, ${info.country}</option>`;
+  }).join('');
+}
+
+/* ---------- Migration: move any old inline base64 photos into IndexedDB ---------- */
+async function migrateToIndexedDB(){
+  let changed = false;
+  for(const t of state.trips){
+    if(typeof t.photo === 'string'){
+      await idbSet('trip:' + t.id, t.photo);
+      t.photo = true;
+      changed = true;
+    }
+    for(const seg of t.segments){
+      if(typeof seg.docPhoto === 'string'){
+        await idbSet('seg:' + seg.id, seg.docPhoto);
+        seg.hasDocPhoto = true;
+        delete seg.docPhoto;
+        changed = true;
+      }
+    }
+  }
+  if(changed) saveData();
+}
+
+/* ---------- Init ---------- */
+applyTheme();
+ensureTrip();
+handleShortcutRouting();
+migrateToIndexedDB().then(renderView);
+renderView();
+setSegType('flight');
+populateAirportList();
+updateAppBadge();
+</script>
+</body>
+</html>
