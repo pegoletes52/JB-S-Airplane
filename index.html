@@ -987,9 +987,9 @@ function flightCodeFromAirline(str){
 function liveLink(seg){
   let url='', label='';
   if(seg.type==='flight'){
-    const code = flightCodeFromAirline(seg.airline);
-    if(code){
-      url = 'https://www.flightradar24.com/data/flights/' + code.toLowerCase();
+    if(seg.airline){
+      const q = seg.airline.trim();
+      url = 'https://www.google.com/search?q=' + encodeURIComponent(q);
       label = '🔴 Estado en vivo';
     } else {
       const q = `estado vuelo ${seg.airline||''} ${seg.dep ? new Date(seg.dep).toLocaleDateString('es-ES') : ''}`.trim();
